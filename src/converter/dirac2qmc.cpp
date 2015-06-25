@@ -70,6 +70,18 @@ void usage(const char * name) {
     exit(1);
 }
 
+void test_basis(vector <Gaussian_basis_set> & basis) {
+    for (int i = 0; i < basis.size(); i++) {
+	cout << "Basis Number: " << i << endl;
+	for (int j = 0; j < basis[i].types.size(); j++) {
+	    cout << "    Type: " << basis[i].types[j] << endl;
+	    for (int k = 0; k < basis[i].exponents[j].size(); k++) 
+		cout << "        " << basis[i].exponents[j][k] << endl;
+	}
+    }
+}
+
+
 //######################################################################
 
 int main(int argc, char ** argv) {
@@ -123,7 +135,7 @@ void read_dirac_mol(string & molfilename,
     string line;
     vector <string> words;
     int linecount = 1;
-    int atom_count = 0;
+
     while(getline(is,line)) {
 	parse(line,words);
 	if (linecount == 4) { // Line that tells the number of atoms
@@ -159,7 +171,6 @@ void read_dirac_mol(string & molfilename,
 		words.clear();
 		getline(is,line);
 		parse(line,words);
-		cout << line << endl;
 		if (line.find("#") != line.npos) {
 		    i -= 1;
 		    continue;
