@@ -65,7 +65,8 @@ void skiplines(ifstream &is, int n) {
 
 void read_dirac_mol(string & molfilename,
 	            vector <Atom> & atoms,
-		    vector <Gaussian_pseudo_writer> & pseudo,
+		    vector <Gaussian_pseudo_writer> & arep,
+		    vector <Gaussian_pseudo_writer> & sorep,
 		    vector <Gaussian_basis_set> & basis);
 
 void read_dirac_out(string & outfilename,
@@ -96,6 +97,17 @@ void test_atoms(vector <Atom> & atoms) {
     }
 }
 
+void test_pseudo(vector <Gaussian_pseudo_writer> & psp) {
+    for (int i = 0; i < psp.size(); i++) {
+	cout << "ECP for Atom: " << psp[i].atomnum << endl;
+	for (int j = 0; j < psp[i].exponents.size(); j++) {
+	    cout << "    Channel: " << j << endl;
+	    for (int k = 0; k < psp[i].exponents[j].size(); k++) {
+		cout << "        " << psp[i].nvalue[j][k] << " " << psp[i].exponents[j][k] << " " << psp[i].coefficients[j][k] << endl;
+	    }
+	}
+    }
+}
 
 //######################################################################
 
@@ -127,9 +139,10 @@ int main(int argc, char ** argv) {
     test_out.close(); test_out.close();
 
     vector <Atom> atoms;
-    vector <Gaussian_pseudo_writer> pseudo;
+    vector <Gaussian_pseudo_writer> arep;
+    vector <Gaussian_pseudo_writer> sorep;
     vector <Gaussian_basis_set> basis;
-    read_dirac_mol(dirac_mol,atoms,pseudo,basis);
+    read_dirac_mol(dirac_mol,atoms,arep,sorep,basis);
     read_dirac_out(dirac_out,atoms);
 
     return 0;    
@@ -139,7 +152,8 @@ int main(int argc, char ** argv) {
 
 void read_dirac_mol(string & molfilename,
 	               vector <Atom> & atoms,
-		       vector <Gaussian_pseudo_writer> & pseudo,
+		       vector <Gaussian_pseudo_writer> & arep,
+		       vector <Gaussian_pseudo_writer> & sorep,
 		       vector <Gaussian_basis_set> & basis) {
 
     ifstream is(molfilename.c_str());
@@ -151,6 +165,7 @@ void read_dirac_mol(string & molfilename,
     string line;
     vector <string> words;
     int linecount = 1;
+    int atom_num = -1;
 
     while(getline(is,line)) {
 	parse(line,words);
@@ -163,6 +178,7 @@ void read_dirac_mol(string & molfilename,
 	// Read basis
 	if (line.find("LARGE EXPLICIT") != line.npos) {
 	    basis.push_back(Gaussian_basis_set());
+	    atom_num += 1;
 	    int num_types=StringToNumber<int>(words[2]); //Number of types
 	    //Allocate space for number of types and exponents
 	    for (int i = 0; i < num_types; i++) { 
@@ -184,9 +200,7 @@ void read_dirac_mol(string & molfilename,
 		}
 	    }
 	    for (int i = 0; i < basis.back().types.size(); i++) {
-		words.clear();
-		getline(is,line);
-		parse(line,words);
+		getline(is,line); words.clear(); parse(line,words);
 		if (line.find("#") != line.npos) {
 		    i -= 1;
 		    continue;
@@ -200,9 +214,77 @@ void read_dirac_mol(string & molfilename,
 		}
 	    }
 	}
+	//Read ECP
+	if (line.find("ECP") != line.npos) {
+            arep.push_back(Gaussian_pseudo_writer());
+            sorep.push_back(Gaussian_pseudo_writer());
+	    arep.back().atomnum = atom_num;
+	    sorep.back().atomnum = atom_num;
+	    int narep, nsorep;
+	    narep = StringToNumber<int>(words[2]);
+	    nsorep = StringToNumber<int>(words[3]);
+	    //Allocate arep & sorep channels
+	    for (int i = 0; i < narep; i++) {
+                vector <double> tmp;
+		vector <int> tmp2;
+		arep.back().exponents.push_back(tmp);
+		arep.back().coefficients.push_back(tmp);
+		arep.back().nvalue.push_back(tmp2);
+	    }
+	    for (int i = 0; i < nsorep; i++) {
+                vector <double> tmp;
+		vector <int> tmp2;
+		sorep.back().exponents.push_back(tmp);
+		sorep.back().coefficients.push_back(tmp);
+		sorep.back().nvalue.push_back(tmp2);
+	    }
+	    //Read AREP
+	    for (int i = 0; i < narep; i++) {
+                getline(is,line); words.clear(); parse(line,words);
+		if (line.find("$") != line.npos || line.find("#") != line.npos) {
+		    i -= 1;
+		    continue;
+		}
+		else {
+		    int nterms = StringToNumber<int>(words[0]);
+		    //allocate number terms for given channel
+		    for (int j = 0; j < nterms; j++) {
+			getline(is,line); words.clear(); parse(line,words);
+			int n = StringToNumber<int>(words[0]);
+			double alpha = StringToNumber<double>(words[1]);
+			double c = StringToNumber<double>(words[2]);
+			arep.back().nvalue[i].push_back(n);
+			arep.back().exponents[i].push_back(alpha);
+			arep.back().coefficients[i].push_back(c);
+		    }
+		}
+	    }
+	    //Read SOREP
+	    for (int i = 0; i < nsorep; i++) {
+                getline(is,line); words.clear(); parse(line,words);
+		if (line.find("$") != line.npos || line.find("#") != line.npos) {
+		    i -= 1;
+		    continue;
+		}
+		else {
+		    int nterms = StringToNumber<int>(words[0]);
+		    //allocate number terms for given channel
+		    for (int j = 0; j < nterms; j++) {
+			getline(is,line); words.clear(); parse(line,words);
+			int n = StringToNumber<int>(words[0]);
+			double alpha = StringToNumber<double>(words[1]);
+			double c = StringToNumber<double>(words[2]);
+			sorep.back().nvalue[i].push_back(n);
+			sorep.back().exponents[i].push_back(alpha);
+			sorep.back().coefficients[i].push_back(c);
+		    }
+		}
+	    }
+	}
 	++linecount;
 	words.clear();
     }
+    is.close(); is.clear();
 }
 
 void read_dirac_out(string & outfilename,
