@@ -57,12 +57,18 @@ void parse(string &s,vector <string> &parsed_string) {
 	parsed_string.push_back(buf);
 }
 
+void skiplines(ifstream &is, int n) {
+    string line;
+    for (int i = 0; i < n; i++)
+	getline(is,line);
+}
+
 void read_dirac_mol(string & molfilename,
 	            vector <Atom> & atoms,
 		    vector <Gaussian_pseudo_writer> & pseudo,
 		    vector <Gaussian_basis_set> & basis);
 
-void read_dirac_output(string & outputfilename,
+void read_dirac_out(string & outfilename,
 	               vector <Atom> & atoms);
 
 void usage(const char * name) {
@@ -78,6 +84,15 @@ void test_basis(vector <Gaussian_basis_set> & basis) {
 	    for (int k = 0; k < basis[i].exponents[j].size(); k++) 
 		cout << "        " << basis[i].exponents[j][k] << endl;
 	}
+    }
+}
+
+void test_atoms(vector <Atom> & atoms) {
+    for (int i = 0; i < atoms.size(); i++) {
+	cout << "Atom: " << atoms[i].name << endl;
+	cout << "      " << atoms[i].charge << endl;
+	cout << "      " << "(" <<atoms[i].pos[0] << ", " 
+	     << atoms[i].pos[1] << ", " << atoms[i].pos[2] << ") " << endl;
     }
 }
 
@@ -115,6 +130,7 @@ int main(int argc, char ** argv) {
     vector <Gaussian_pseudo_writer> pseudo;
     vector <Gaussian_basis_set> basis;
     read_dirac_mol(dirac_mol,atoms,pseudo,basis);
+    read_dirac_out(dirac_out,atoms);
 
     return 0;    
 }
@@ -186,5 +202,49 @@ void read_dirac_mol(string & molfilename,
 	}
 	++linecount;
 	words.clear();
+    }
+}
+
+void read_dirac_out(string & outfilename,
+	               vector <Atom> & atoms) {
+
+    ifstream is(outfilename.c_str());
+    if (!is) {
+	cout << "Couldn't open " << outfilename << endl;
+	exit(1);
+    }
+
+    string line;
+    vector <string> words;
+    int num_atoms;
+
+    while(getline(is,line)) {
+        parse(line,words);
+	//Atom names and charges
+        if (line.find("Atoms and basis") != line.npos) {
+	    skiplines(is,3);
+	    words.clear(); getline(is,line); parse(line,words);
+	    num_atoms = StringToNumber<int>(words[4]);
+            skiplines(is,3);
+	    for (int i = 0; i < num_atoms; i++) {
+		getline(is,line); words.clear(); parse(line,words);
+		atoms[i].name = words[0];
+		atoms[i].charge = StringToNumber<double>(words[2]);
+		getline(is,line);
+	    }
+	}
+	//Atom Positions
+	if (line.find("Cartesian Coord") != line.npos) {
+	    skiplines(is,5);
+	    for (int i = 0; i < num_atoms; i++) {
+                getline(is,line); words.clear(); parse(line,words);
+		atoms[i].pos[0] = StringToNumber<double>(words[3]);
+                getline(is,line); words.clear(); parse(line,words);
+		atoms[i].pos[1] = StringToNumber<double>(words[2]);
+                getline(is,line); words.clear(); parse(line,words);
+		atoms[i].pos[2] = StringToNumber<double>(words[2]);
+                skiplines(is,1);
+	    }
+	}
     }
 }
