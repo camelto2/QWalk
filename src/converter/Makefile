@@ -17,10 +17,11 @@ HEG2QMCOBJS := $(OBJPATH)/heg2qmc.o $(OBJPATH)/indexx.o
 HEG2QMCCOBJS := $(OBJPATH)/heg2qmcc.o $(OBJPATH)/indexx.o $(OBJPATH)/setk01.o
 NWCHEM2QMCOBJS := $(OBJPATH)/nwchem2qmc.o $(ALLOBJS)
 SQD2QMCOBJS:=$(OBJPATH)/sqd2qmc.o $(ALLOBJS)
+DIRAC2QMCOBJS:=$(OBJPATH)/dirac2qmc.o $(ALLOBJS)
 
 SUFFIX := -$(PLATFORM) 
 
-all: nwchem2qmc$(SUFFIX) gamess2qmc$(SUFFIX) gamessci2qmc$(SUFFIX) crystal2qmc$(SUFFIX) siesta2qmc$(SUFFIX) g032qmc$(SUFFIX) heg2qmc$(SUFFIX) abinit2qmc$(SUFFIX) 
+all: nwchem2qmc$(SUFFIX) gamess2qmc$(SUFFIX) gamessci2qmc$(SUFFIX) crystal2qmc$(SUFFIX) siesta2qmc$(SUFFIX) g032qmc$(SUFFIX) heg2qmc$(SUFFIX) abinit2qmc$(SUFFIX) dirac2qmc$(SUFFIX)
 .PHONY: clean 
 
 gamess2qmc$(SUFFIX): $(GAMESS2QMCOBJS)
@@ -88,10 +89,15 @@ sqd2qmc$(SUFFIX) : $(SQD2QMCOBJS)
 	@echo Linking $@
 	$(CXX) $(DEBUG) $(CXXFLAGS) -o sqd2qmc$(SUFFIX) $(LDFLAGS) $(BLAS_LIBS) $(SQD2QMCOBJS) $(XML_LIBS) $(HDF_LIBS) 
 
+dirac2qmc$(SUFFIX) : $(DIRAC2QMCOBJS)
+	@echo ________________________________________________________________
+	@echo Linking $@
+	$(CXX) $(DEBUG) $(CXXFLAGS) -o dirac2qmc$(SUFFIX) $(LDFLAGS) $(BLAS_LIBS) $(DIRAC2QMCOBJS)
+
 clean: 
 	@echo ________________________________________________________________
 	@echo Cleaning object files... 
-	rm -f $(GAMESS2QMCOBJS) $(NWCHEM2QMCOBJS) $(GAMESSCI2QMCOBJS) $(CRYSTAL2QMCOBJS) $(JEEP2QMCOBJS) $(SIESTA2QMCOBJS) $(G032QMCOBJS) $(HEG2QMCOBJS) $(HEG2QMCCOBJS) $(ABINIT2QMCOBJS)$(SQD2QMCOBJS) siesta2qmc$(SUFFIX) g032qmc$(SUFFIX) gamess2qmc$(SUFFIX) gamessci2qmc$(SUFFIX) jeep2qmc$(SUFFIX) crystal2qmc$(SUFFIX) heg2qmc$(SUFFIX) heg2qmcc$(SUFFIX) abinit2qmc$(SUFFIX) sqd2qmc$(SUFFIX) nwchem2qmc$(SUFFIX) 
+	rm -f $(GAMESS2QMCOBJS) $(NWCHEM2QMCOBJS) $(GAMESSCI2QMCOBJS) $(CRYSTAL2QMCOBJS) $(JEEP2QMCOBJS) $(SIESTA2QMCOBJS) $(G032QMCOBJS) $(HEG2QMCOBJS) $(HEG2QMCCOBJS) $(ABINIT2QMCOBJS)$(SQD2QMCOBJS) $(DIRAC2QMCOBJS) siesta2qmc$(SUFFIX) g032qmc$(SUFFIX) gamess2qmc$(SUFFIX) gamessci2qmc$(SUFFIX) jeep2qmc$(SUFFIX) crystal2qmc$(SUFFIX) heg2qmc$(SUFFIX) heg2qmcc$(SUFFIX) abinit2qmc$(SUFFIX) sqd2qmc$(SUFFIX) nwchem2qmc$(SUFFIX) dirac2qmc$(SUFFIX)
 
 $(OBJPATH)/%.o:$(DVLPATH)/%.cpp
 	@echo ________________________________________________________________
