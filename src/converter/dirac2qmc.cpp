@@ -69,6 +69,10 @@ void read_dirac_mol(string & molfilename,
 		    vector <Gaussian_pseudo_writer> & sorep,
 		    vector <Gaussian_basis_set> & basis);
 
+void convert_arep_sorep_rrep(vector <Gaussian_pseudo_writer> & arep,
+	                     vector <Gaussian_pseudo_writer> & sorep,
+			     vector <Gaussian_pseudo_writer> & rrep);
+
 void read_dirac_out(string & outfilename,
 	               vector <Atom> & atoms);
 
@@ -141,9 +145,13 @@ int main(int argc, char ** argv) {
     vector <Atom> atoms;
     vector <Gaussian_pseudo_writer> arep;
     vector <Gaussian_pseudo_writer> sorep;
+    vector <Gaussian_pseudo_writer> rrep;
     vector <Gaussian_basis_set> basis;
+
     read_dirac_mol(dirac_mol,atoms,arep,sorep,basis);
     read_dirac_out(dirac_out,atoms);
+
+    convert_arep_sorep_rrep(arep,sorep,rrep);
 
     return 0;    
 }
@@ -164,21 +172,20 @@ void read_dirac_mol(string & molfilename,
 
     string line;
     vector <string> words;
-    int linecount = 1;
-    int atom_num = -1;
-
+    int atom_num = 0;
+    skiplines(is,3); // 1st 3 lines are comments
+    getline(is,line);
+    parse(line,words);
+    int num_atoms = StringToNumber<int>(words[1]);
+    for (int i = 0; i < num_atoms; i++) {
+	atoms.push_back(Atom());
+	atoms.back().basis = i;
+    }
     while(getline(is,line)) {
 	parse(line,words);
-	if (linecount == 4) { // Line that tells the number of atoms
-	    for (int i = 0; i < StringToNumber<int>(words[1]); i++) {
-		atoms.push_back(Atom());
-	        atoms.back().basis = i;
-	    }
-	}
 	// Read basis
 	if (line.find("LARGE EXPLICIT") != line.npos) {
 	    basis.push_back(Gaussian_basis_set());
-	    atom_num += 1;
 	    int num_types=StringToNumber<int>(words[2]); //Number of types
 	    //Allocate space for number of types and exponents
 	    for (int i = 0; i < num_types; i++) { 
@@ -280,11 +287,72 @@ void read_dirac_mol(string & molfilename,
 		    }
 		}
 	    }
+	    atom_num+=1;
 	}
-	++linecount;
 	words.clear();
     }
     is.close(); is.clear();
+}
+
+void convert_arep_sorep_rrep(vector <Gaussian_pseudo_writer> & arep,
+	                     vector <Gaussian_pseudo_writer> & sorep,
+			     vector <Gaussian_pseudo_writer> & rrep) {
+
+    //Creating RREP for number of atoms. RREP has 2n-2 channels, where
+    //n is the number of channels in AREP
+    for (int at = 0; at < arep.size(); at++) {
+	rrep.push_back(Gaussian_pseudo_writer());
+	if (arep[at].nvalue.size() != 1) {
+            for (int i = 0; i < (2*arep[at].nvalue.size()-2); i++) {
+	        vector <double> tmp;
+	        vector <int> tmp2;
+	        rrep.back().nvalue.push_back(tmp2);
+	        rrep.back().exponents.push_back(tmp);
+	        rrep.back().coefficients.push_back(tmp);
+	    }
+	}
+	else {
+	     vector <double> tmp;
+	     vector <int> tmp2;
+	     rrep.back().nvalue.push_back(tmp2);
+	     rrep.back().exponents.push_back(tmp);
+	     rrep.back().coefficients.push_back(tmp);
+	}
+    }
+
+    for (int at = 0; at < arep.size(); at++) {
+	//Skip the first element in AREP...it is the local channel.
+	//Add it last
+	rrep[at].atomnum = arep[at].atomnum;
+	for (int i = 1; i < arep[at].nvalue.size(); i++) {
+	    double l = double(i-1); // because of how arep is stored
+	    if (i == 1) {
+		for (int j = 0; j < arep[at].coefficients[i].size(); j++) {
+		    rrep[at].nvalue[i-1].push_back(arep[at].nvalue[i][j]);
+		    rrep[at].exponents[i-1].push_back(arep[at].exponents[i][j]);
+		    rrep[at].coefficients[i-1].push_back(arep[at].coefficients[i][j]);
+		}
+	    }
+	    else {
+		for (int j = 0; j < arep[at].coefficients[i].size(); j++) {
+		    // l j=l+1/2
+		    rrep[at].nvalue[i-1].push_back(arep[at].nvalue[i][j]);
+		    rrep[at].exponents[i-1].push_back(arep[at].exponents[i][j]);
+		    rrep[at].coefficients[i-1].push_back(arep[at].coefficients[i][j]+0.5*l*sorep[at].coefficients[i-2][j]);
+		    // l j=l-1/2
+		    rrep[at].nvalue[i].push_back(arep[at].nvalue[i][j]);
+		    rrep[at].exponents[i].push_back(arep[at].exponents[i][j]);
+		    rrep[at].coefficients[i].push_back(arep[at].coefficients[i][j]-0.5*(l+1.0)*sorep[at].coefficients[i-2][j]);
+		}
+	    }
+	}
+	//add local channel to end of RREP
+	for (int i = 0; i < arep[at].nvalue[0].size(); i++) {
+	    rrep[at].nvalue.back().push_back(arep[at].nvalue[0][i]);
+	    rrep[at].exponents.back().push_back(arep[at].exponents[0][i]);
+	    rrep[at].coefficients.back().push_back(arep[at].coefficients[0][i]);
+	}
+    }
 }
 
 void read_dirac_out(string & outfilename,
@@ -329,4 +397,6 @@ void read_dirac_out(string & outfilename,
 	    }
 	}
     }
+
+    is.close(); is.clear();
 }
