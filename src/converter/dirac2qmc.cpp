@@ -50,6 +50,19 @@ string NumberToString ( T Number )
     return ss.str();
 }
 
+template <typename T>
+void insertion_sort (vector <T> &list) {
+    for(int j=1;j<list.size();j++) {
+	T key=list[j];
+	T i = j-1;
+	while(i>-1 and list[i]>key) {
+	    list[i+1]=list[i];
+            i=i-1;
+        }
+        list[i+1]=key;
+    }
+}
+
 void parse(string &s,vector <string> &parsed_string) {
     stringstream ss(s);
     string buf;
@@ -63,6 +76,53 @@ void skiplines(ifstream &is, int n) {
 	getline(is,line);
 }
 
+class Orbital {
+    public:
+	int natoms;
+	vector < vector < vector < complex<double> > > > coeff;
+	Orbital(vector <Gaussian_basis_set> &basis) {
+	    natoms = basis.size();
+	    vector < vector < complex<double> > > tmp;
+	    for (int at = 0; at < natoms; at++) 
+		coeff.push_back(tmp);
+	    for (int at = 0; at < natoms; at++) {
+		vector < complex<double> > x;
+		for (int i = 0; i < basis[at].types.size(); i++) {
+		    coeff[at].push_back(x);
+		}
+	    }
+	    for (int at = 0; at < natoms; at++) {
+		complex <double> x = (0.0,0.0);
+		for (int l = 0; l < coeff[at].size(); l++) {
+		    int n;
+		    switch (l) {
+			case 0: 
+			    n=2;
+			    break;
+			case 1: 
+			    n=6;
+			    break;
+			case 2:
+			    n = 12;
+			    break;
+			case 3:
+			    n = 20;
+			    break;
+			case 4:
+			    n = 30;
+			    break;
+			default:
+			    cout << "Unsupported basis function. Only s,p,d,f,g. Exiting" << endl;
+			    exit(1);
+		    }
+		    for (int i = 0; i < n*basis[at].exponents[l].size(); i++) 
+			coeff[at][l].push_back(x);
+		}
+	    }
+	}
+	void kramers_pair();
+};
+
 void read_dirac_mol(string & molfilename,
 	            vector <Atom> & atoms,
 		    vector <Gaussian_pseudo_writer> & arep,
@@ -73,11 +133,19 @@ void convert_arep_sorep_rrep(vector <Gaussian_pseudo_writer> & arep,
 	                     vector <Gaussian_pseudo_writer> & sorep,
 			     vector <Gaussian_pseudo_writer> & rrep);
 
+void read_orb(vector <string> &orblines,
+	      vector <Gaussian_basis_set> &basis,
+	      vector <Atom> &atoms,
+	      vector <Orbital> &orbs);
+
 void read_dirac_out(string & outfilename,
-	               vector <Atom> & atoms);
+	               vector <Atom> & atoms,
+		       vector <Gaussian_pseudo_writer> & arep,
+		       vector <Gaussian_basis_set> & basis,
+		       vector <Orbital> & orbs);
 
 void usage(const char * name) {
-    cout << "usage: " << name << " <xx.inp> <xx.mol> " << endl;
+    cout << "usage: " << name << " <xx.inp> <xx.mol> <output root> " << endl;
     exit(1);
 }
 
@@ -113,16 +181,24 @@ void test_pseudo(vector <Gaussian_pseudo_writer> & psp) {
     }
 }
 
+
+void write_to_sys(string output_root, vector <Atom> & atoms, vector <Gaussian_pseudo_writer> & rrep);
+
+void write_to_basis(string output_root, vector <Gaussian_basis_set> & basis, vector <Atom> & atoms);
+
+void write_to_jast3(string output_root, vector <Atom> & atoms);
+
 //######################################################################
 
 int main(int argc, char ** argv) {
 
-    if (argc != 3) usage(argv[0]);
+    if (argc != 4) usage(argv[0]);
     
     ifstream test_out; ifstream test_mol; ifstream test_inp;
     string dirac_out=string(argv[1])+"_"+string(argv[2])+".out";
     string dirac_inp=string(argv[1])+".inp";
     string dirac_mol=string(argv[2])+".mol";
+    string output_root=string(argv[3]);
     test_inp.open(dirac_inp.c_str());
     test_mol.open(dirac_mol.c_str());
     test_out.open(dirac_out.c_str());
@@ -147,11 +223,16 @@ int main(int argc, char ** argv) {
     vector <Gaussian_pseudo_writer> sorep;
     vector <Gaussian_pseudo_writer> rrep;
     vector <Gaussian_basis_set> basis;
+    vector <Orbital> orbs;
 
     read_dirac_mol(dirac_mol,atoms,arep,sorep,basis);
-    read_dirac_out(dirac_out,atoms);
+    read_dirac_out(dirac_out,atoms,arep,basis,orbs);
 
     convert_arep_sorep_rrep(arep,sorep,rrep);
+
+    write_to_sys(output_root, atoms, rrep);
+    write_to_basis(output_root, basis, atoms);
+    write_to_jast3(output_root, atoms);
 
     return 0;    
 }
@@ -353,10 +434,71 @@ void convert_arep_sorep_rrep(vector <Gaussian_pseudo_writer> & arep,
 	    rrep[at].coefficients.back().push_back(arep[at].coefficients[0][i]);
 	}
     }
+    for (int at = 0; at < rrep.size(); at++) {
+	rrep[at].label = arep[at].label;
+	for (int i = 0; i < rrep[at].nvalue.size(); i++)  {
+	    for (int j = 0; j < rrep[at].nvalue[i].size(); j++) 
+		rrep[at].nvalue[i][j] -= 2;
+        }
+    }
+}
+
+
+void read_orb(vector <string> & orblines,
+	      vector <Gaussian_basis_set> & basis,
+	      vector <Atom> & atoms,
+	      vector <Orbital> & orbs) {
+
+    double snorm=sqrt(1.0/4.0/3.14159265359);
+    double pnorm=snorm*sqrt(3.0);
+    double dnorm=snorm*sqrt(15.0);
+    double fnorm=snorm*sqrt(105.0);
+    double gnorm=snorm*sqrt(315.0);
+
+    vector <string> words;
+
+    int norbs = 0;
+    for (int i = 0; i < orblines.size(); i++) {
+	if (orblines[i].find("Electronic") != orblines[i].npos) norbs++;
+    }
+    norbs *= 2;
+    for (int mo = 0; mo < norbs; mo++) 
+	orbs.push_back(Orbital(basis));
+
+    for (int mo = 0; mo < norbs; mo++) {
+	cout << "Orbital: " << mo << endl;
+	for (int at = 0; at < orbs[mo].natoms; at++) {
+	    cout << "    Atom: " << at << endl;
+	    for (int l = 0; l < orbs[mo].coeff[at].size(); l++) {
+		cout << "        Types: " << l << endl;
+		for (int j = 0; j < orbs[mo].coeff[at][l].size(); j++) 
+		    cout << "            " << orbs[mo].coeff[at][l][j] << endl;
+	    }
+	}
+    }
+
+    for (int i = 0; i < orblines.size(); i++) {
+	if (orblines[i].find("Electronic ") != orblines[i].npos) {
+	    i += 2; 
+	    while (orblines[i].find("Electronic") == orblines[i].npos) {
+		if (orblines[i] == "") {
+		    i++; 
+		    break;
+		}
+		words.clear(); parse(orblines[i],words);
+		if (i == orblines.size() - 1) break;
+		else i++;
+	    }
+	    i--;
+	}
+    }
 }
 
 void read_dirac_out(string & outfilename,
-	               vector <Atom> & atoms) {
+	               vector <Atom> & atoms,
+		       vector <Gaussian_pseudo_writer> & arep,
+		       vector < Gaussian_basis_set> & basis,
+		       vector <Orbital> & orbs ) {
 
     ifstream is(outfilename.c_str());
     if (!is) {
@@ -367,6 +509,8 @@ void read_dirac_out(string & outfilename,
     string line;
     vector <string> words;
     int num_atoms;
+
+    vector <string> orblines;
 
     while(getline(is,line)) {
         parse(line,words);
@@ -396,7 +540,104 @@ void read_dirac_out(string & outfilename,
                 skiplines(is,1);
 	    }
 	}
+	// Orbitals
+	if (line.find("***** Vector print *****") != line.npos) {
+	    skiplines(is,12);
+	    while (getline(is,line)) {
+		if (line.find("*****************") != line.npos)
+		    break;
+		orblines.push_back(line);
+	    }
+	}
+	// Slater Determinants
     }
 
     is.close(); is.clear();
+    for (int at = 0; at < atoms.size(); at++) 
+	arep[at].label = atoms[at].name;
+
+    read_orb(orblines,basis,atoms,orbs);
+
+}
+
+void write_to_sys(string output_root, vector <Atom> & atoms, vector <Gaussian_pseudo_writer> & rrep) {
+
+    int nelec = 0;
+    for (int at = 0; at < atoms.size(); at++) 
+	nelec += atoms[at].charge;
+
+    ofstream sys;
+    string sys_name=output_root+".sys";
+    sys.open(sys_name.c_str());
+    sys << "SYSTEM { MOLECULE" << endl;
+    sys << "  SO_NSPIN { " <<  nelec << " 0 }" << endl;
+    for (int at = 0; at < atoms.size(); at++) 
+	atoms[at].print_atom(sys);
+    sys << "}" << endl;
+    sys << endl;
+    for (int at = 0; at < rrep.size(); at++) 
+	rrep[at].print_pseudo(sys);
+    sys.close();
+
+}
+
+void write_to_basis(string output_root, vector <Gaussian_basis_set> & basis, vector <Atom> & atoms) {
+
+    ofstream bas;
+    string bas_name=output_root+".basis";
+    bas.open(bas_name.c_str());
+    for (int at = 0; at < basis.size(); at++) {
+	bas << "BASIS { " << endl;
+	bas << atoms[at].name << endl;
+	bas << "SO_spline" << endl;
+	bas << endl;
+	bas << " GAMESS {" << endl;
+	for ( int i = 0; i < basis[at].types.size(); i++) {
+	    insertion_sort<double>(basis[at].exponents[i]);
+	    for (int j = basis[at].exponents[i].size()-1; j>=0; j--) {
+		bas << basis[at].types[i] << "   1 " << endl;
+		bas << "  1  " << basis[at].exponents[i][j] << "  1 " << endl;
+	    }
+	}
+        bas << " }"<< endl;
+	bas << "} " << endl;
+	bas << endl;
+    }
+    bas.close();
+}
+
+void write_to_jast3(string output_root, vector <Atom> & atoms) {
+
+    ofstream jast;
+    string jast_name=output_root+".jast3";
+    jast.open(jast_name.c_str());
+    jast << "JASTROW2" << endl;
+    jast << "GROUP {" << endl;
+    jast << " OPTIMIZEBASIS " << endl;
+    jast << " EEBASIS { EE CUTOFF_CUSP GAMMA 24.0 CUSP 1.0 CUTOFF 15 } " << endl;
+    jast << " EEBASIS { EE CUTOFF_CUSP GAMMA 24.0 CUSP 1.0 CUTOFF 15 } " << endl;
+    jast << " TWOBODY_SPIN {  FREEZE " << endl;
+    jast << "   LIKE_COEFFICIENTS { 0.5  0.0 } " << endl;
+    jast << "   UNLIKE_COEFFICIENTS { 0.0 0.5 } " << endl;
+    jast << " }" << endl;
+    jast << "}" << endl;
+    jast << "GROUP { " << endl;
+    jast << " OPTIMIZEBASIS" << endl;
+    jast << " EEBASIS { EE POLYPADE BETA0 0.5 NFUNC 4 RCUT 15 } " << endl;
+    for (int at = 0; at < atoms.size(); at++) 
+	jast << " EIBASIS { " << atoms[at].name << " POLYPADE BETA0 0.2 NFUNC 4 RCUT 15 }" << endl;
+    jast << " ONEBODY {" << endl;
+    for (int at = 0; at < atoms.size(); at++) 
+	jast << "  COEFFICIENTS { " << atoms[at].name << " 0 0 0 0 }" << endl;
+    jast << " }" << endl;
+    jast << " TWOBODY {" << endl;
+    jast << "  COEFFICIENTS { 0 0 0 0 } " << endl;
+    jast << " }" << endl;
+    jast << " THREEBODY {" << endl;
+    for (int at = 0; at < atoms.size(); at++) 
+	jast << "  COEFFICIENTS { " << atoms[at].name << " 0 0 0 0 0 0 0 0 0 0 0 0 } " << endl;
+    jast << " }" << endl;
+    jast << "}" << endl;
+
+    jast.close();
 }
