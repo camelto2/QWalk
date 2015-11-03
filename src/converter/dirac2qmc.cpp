@@ -553,6 +553,7 @@ void read_orb(vector <string> & orblines,
 			    pit[at]++;
 			    orbs[mo].coeff[at][1][pit[at]] = (0.0,0.0);
 			    pit[at]++;
+			    i--;
 			}
 		    }
 		    else if (words[2] == orbs[mo].label[at] && (
@@ -577,6 +578,7 @@ void read_orb(vector <string> & orblines,
 			    dit[at]++;
 			    orbs[mo].coeff[at][2][dit[at]] = (0.0,0.0);
 			    dit[at]++;
+			    i--;
 			}
 		    }
 		    else if (words[2] == orbs[mo].label[at] && (
@@ -607,6 +609,7 @@ void read_orb(vector <string> & orblines,
 			    fit[at]++;
 			    orbs[mo].coeff[at][3][fit[at]] = (0.0,0.0);
 			    fit[at]++;
+			    i--;
 			}
 		    }
 		    else if (words[2] == orbs[mo].label[at] && (
@@ -643,6 +646,7 @@ void read_orb(vector <string> & orblines,
 			    git[at]++;
 			    orbs[mo].coeff[at][4][git[at]] = (0.0,0.0);
 			    git[at]++;
+			    i--;
 			}
 		    }
 		    else {
