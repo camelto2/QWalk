@@ -96,7 +96,7 @@ class Orbital {
 		}
 	    }
 	    for (int at = 0; at < natoms; at++) {
-		complex <double> x = (0.0,0.0);
+		complex<double> x(0.0,0.0);
 		for (int l = 0; l < coeff[at].size(); l++) {
 		    int n;
 		    switch (l) {
@@ -124,7 +124,142 @@ class Orbital {
 		}
 	    }
 	}
-
+        void qwalk_ordering() {
+	    for (int at = 0; at < natoms; at++) {
+		for (int l = 2; l < coeff[at].size(); l++) {
+		    for (int i = 0; i < coeff[at][l].size(); i++) {
+			complex<double> tmp;
+		        if (l == 2) { 
+			    // DIRAC ordering: dxx dxy dxz dyy dyz dzz
+			    // QWALK ordering: dxx dyy dzz dxy dxz dyz
+			    if (i%12 == 2 || i%12 == 3) {
+				tmp = coeff[at][l][i+4];
+				coeff[at][l][i+4] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%12 == 4 || i%12 == 5) {
+				tmp = coeff[at][l][i+6];
+				coeff[at][l][i+6]=coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%12 == 8 || i%12 == 9) {
+				tmp = coeff[at][l][i+2];
+				coeff[at][l][i+2]=coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    
+			}
+			else if (l == 3) {
+			    // DIRAC ordering: xxx xxy xxz xyy xyz xzz yyy yyz yzz zzz
+			    // QWALK ordering: xxx yyy zzz xxy xxz xyy yyz xzz yzz xyz
+			    if (i%20 == 2 || i%20 == 3) {
+				tmp = coeff[at][l][i+10];
+				coeff[at][l][i+10] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%20 == 4 || i%20 == 5) {
+				tmp = coeff[at][l][i+14];
+				coeff[at][l][i+14] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%20 == 6 || i%20 == 7) {
+				tmp = coeff[at][l][i+6];
+				coeff[at][l][i+6] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%20 == 8 || i%20 == 9) {
+				tmp = coeff[at][l][i+10];
+				coeff[at][l][i+10] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%20 == 10 || i%20 == 11) {
+				tmp = coeff[at][l][i+2];
+				coeff[at][l][i+2] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%20 == 12 || i%20 == 13) {
+				tmp = coeff[at][l][i+2];
+				coeff[at][l][i+2] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			}
+			else if (l == 4) {
+			    // DIRAC ordering: 400 310 301 220 211 202 130 121 112 103 040 031 022 013 004
+			    // QWALK ordering: 400 040 004 310 301 130 031 103 013 220 202 022 211 121 112
+			    if (i%30 == 2 || i%30 == 3) {
+				tmp = coeff[at][l][i+18];
+				coeff[at][l][i+18] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 4 || i%30 == 5) {
+				tmp = coeff[at][l][i+24];
+				coeff[at][l][i+24] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 6 || i%30 == 7) {
+				tmp = coeff[at][l][i+14];
+				coeff[at][l][i+14] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 8 || i%30 == 9) {
+				tmp = coeff[at][l][i+20];
+				coeff[at][l][i+20] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 10 || i%30 == 11) {
+				tmp = coeff[at][l][i+2];
+				coeff[at][l][i+2] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 12 || i%30 == 13) {
+				tmp = coeff[at][l][i+10];
+				coeff[at][l][i+10] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 14 || i%30 == 15) {
+				tmp = coeff[at][l][i+4];
+				coeff[at][l][i+4] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 16 || i%30 == 17) {
+				tmp = coeff[at][l][i+10];
+				coeff[at][l][i+10] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 18 || i%30 == 19) {
+				tmp = coeff[at][l][i+2];
+				coeff[at][l][i+2] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 20 || i%30 == 21) {
+				tmp = coeff[at][l][i+2];
+				coeff[at][l][i+2] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 22 || i%30 == 23) {
+				tmp = coeff[at][l][i+2];
+				coeff[at][l][i+2] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 24 || i%30 == 25) {
+				tmp = coeff[at][l][i+4];
+				coeff[at][l][i+4] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			    else if (i%30 == 26 || i%30 == 27) {
+				tmp = coeff[at][l][i+2];
+				coeff[at][l][i+2] = coeff[at][l][i];
+				coeff[at][l][i] = tmp;
+			    }
+			}
+			else {
+			    cout << "Error: Only supports up to g functions. Exiting" << endl;
+			    exit(1);
+			}
+		    }
+		}
+	    }
+	}
 	void kramers_pair(Orbital & old) {
 
 	}
@@ -524,16 +659,11 @@ void read_orb(vector <string> & orblines,
 		c[1] = StringToNumber<double>(words[6]);
 		c[2] = StringToNumber<double>(words[7]);
 		c[3] = StringToNumber<double>(words[8]);
-		for (int j = 0; j < 4; j++) cout << c[j] << " ";
-		cout << endl;
 		for (int at = 0; at < orbs[mo].natoms; at++) {
 		    if (words[2] == orbs[mo].label[at] && words[4] == "s") {
-			for (int j = 0; j < 4; j++) c[j] *= snorm;
-			orbs[mo].coeff[at][0][sit[at]] = (c[0],c[1]);
-			cout << "MO: " << mo << " At: " << at << " ||  " << sit[at] << " " << orbs[mo].coeff[at][0][sit[at]] << endl;
+			orbs[mo].coeff[at][0][sit[at]] = complex<double>(c[0],c[1]);
 			sit[at]++;
-			orbs[mo].coeff[at][0][sit[at]] = (c[2],c[3]);
-			cout << "MO: " << mo << " At: " << at << " ||  " << sit[at] << " " << orbs[mo].coeff[at][0][sit[at]] << endl;
+			orbs[mo].coeff[at][0][sit[at]] = complex<double>(c[2],c[3]);
 			sit[at]++;
 		    }
 		    else if (words[2] == orbs[mo].label[at] && 
@@ -543,15 +673,16 @@ void read_orb(vector <string> & orblines,
 			    (words[4] == "py" && pit[at]%6 == 2) ||
 			    (words[4] == "pz" && pit[at]%6 == 4)) {
 
-			    orbs[mo].coeff[at][1][pit[at]] = (c[0],c[1]);
-			    orbs[mo].coeff[at][1][pit[at]] = (c[2],c[3]);
+			    orbs[mo].coeff[at][1][pit[at]] = complex<double>(c[0],c[1]);
+			    pit[at]++;
+			    orbs[mo].coeff[at][1][pit[at]] = complex<double>(c[2],c[3]);
 			    pit[at]++;
 
 			}
 			else {
-			    orbs[mo].coeff[at][1][pit[at]] = (0.0,0.0);
+			    orbs[mo].coeff[at][1][pit[at]] = complex<double>(0.0,0.0);
 			    pit[at]++;
-			    orbs[mo].coeff[at][1][pit[at]] = (0.0,0.0);
+			    orbs[mo].coeff[at][1][pit[at]] = complex<double>(0.0,0.0);
 			    pit[at]++;
 			    i--;
 			}
@@ -567,16 +698,16 @@ void read_orb(vector <string> & orblines,
 			    (words[4] == "dyz" && dit[at]%12 == 8) ||
 			    (words[4] == "dzz" && dit[at]%12 == 10)) {
 
-			    orbs[mo].coeff[at][2][dit[at]] = (c[0],c[1]);
+			    orbs[mo].coeff[at][2][dit[at]] = complex<double>(c[0],c[1]);
 			    dit[at]++;
-			    orbs[mo].coeff[at][2][dit[at]] = (c[2],c[3]);
+			    orbs[mo].coeff[at][2][dit[at]] = complex<double>(c[2],c[3]);
 			    dit[at]++;
 
 			}
 			else {
-			    orbs[mo].coeff[at][2][dit[at]] = (0.0,0.0);
+			    orbs[mo].coeff[at][2][dit[at]] = complex<double>(0.0,0.0);
 			    dit[at]++;
-			    orbs[mo].coeff[at][2][dit[at]] = (0.0,0.0);
+			    orbs[mo].coeff[at][2][dit[at]] = complex<double>(0.0,0.0);
 			    dit[at]++;
 			    i--;
 			}
@@ -598,16 +729,17 @@ void read_orb(vector <string> & orblines,
 			    (words[4] == "fyzz" && fit[at]%20 == 16) ||
 			    (words[4] == "fzzz" && fit[at]%20 == 18)) {
 
-			    orbs[mo].coeff[at][3][fit[at]] = (c[0],c[1]);
+			    orbs[mo].coeff[at][3][fit[at]] = complex<double>(c[0],c[1]);
 			    fit[at]++;
-			    orbs[mo].coeff[at][3][fit[at]] = (c[2],c[3]);
+			    orbs[mo].coeff[at][3][fit[at]] = complex<double>(c[2],c[3]);
+			    fit[at]++;
 			    fit[at]++;
 
 			}
 			else {
-			    orbs[mo].coeff[at][3][fit[at]] = (0.0,0.0);
+			    orbs[mo].coeff[at][3][fit[at]] = complex<double>(0.0,0.0);
 			    fit[at]++;
-			    orbs[mo].coeff[at][3][fit[at]] = (0.0,0.0);
+			    orbs[mo].coeff[at][3][fit[at]] = complex<double>(0.0,0.0);
 			    fit[at]++;
 			    i--;
 			}
@@ -635,20 +767,21 @@ void read_orb(vector <string> & orblines,
 			    (words[4] == "g013" && git[at]%30 == 26) ||
 			    (words[4] == "g004" && git[at]%30 == 28)) {
 
-			    orbs[mo].coeff[at][4][git[at]] = (c[0],c[1]);
+			    orbs[mo].coeff[at][4][git[at]] = complex<double>(c[0],c[1]);
 			    git[at]++;
-			    orbs[mo].coeff[at][4][git[at]] = (c[2],c[3]);
+			    orbs[mo].coeff[at][4][git[at]] = complex<double>(c[2],c[3]);
 			    git[at]++;
 
 			}
 			else {
-			    orbs[mo].coeff[at][4][git[at]] = (0.0,0.0);
+			    orbs[mo].coeff[at][4][git[at]] = complex<double>(0.0,0.0);
 			    git[at]++;
-			    orbs[mo].coeff[at][4][git[at]] = (0.0,0.0);
+			    orbs[mo].coeff[at][4][git[at]] = complex<double>(0.0,0.0);
 			    git[at]++;
 			    i--;
 			}
 		    }
+		    else if (words[2] != orbs[mo].label[at]) continue;
 		    else {
 			cout << "Error converting orbitals" << endl;
 			exit(1);
@@ -658,6 +791,7 @@ void read_orb(vector <string> & orblines,
 		else i++;
 	    }
 	    i--;
+	    orbs[mo].qwalk_ordering();
 	    mo++;
 	    orbs[mo].kramers_pair(orbs[mo-1]);
 	    mo++;
