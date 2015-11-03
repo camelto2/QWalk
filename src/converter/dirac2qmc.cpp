@@ -29,6 +29,7 @@ Date: 06/25/2015
 #include <vector>
 #include <fstream>
 #include <cmath>
+#include <complex>
 #include "basis_writer.h"
 #include "Pseudo_writer.h"
 #include "wf_writer.h"
@@ -79,9 +80,12 @@ void skiplines(ifstream &is, int n) {
 class Orbital {
     public:
 	int natoms;
+	vector <string> label;
 	vector < vector < vector < complex<double> > > > coeff;
 	Orbital(vector <Gaussian_basis_set> &basis) {
 	    natoms = basis.size();
+	    string blank="";
+	    for (int i = 0; i < natoms; i++) label.push_back(blank);
 	    vector < vector < complex<double> > > tmp;
 	    for (int at = 0; at < natoms; at++) 
 		coeff.push_back(tmp);
@@ -120,7 +124,10 @@ class Orbital {
 		}
 	    }
 	}
-	void kramers_pair();
+
+	void kramers_pair(Orbital & old) {
+
+	}
 };
 
 void read_dirac_mol(string & molfilename,
@@ -135,7 +142,7 @@ void convert_arep_sorep_rrep(vector <Gaussian_pseudo_writer> & arep,
 
 void read_orb(vector <string> &orblines,
 	      vector <Gaussian_basis_set> &basis,
-	      vector <Atom> &atoms,
+	      vector <Atom> & atoms,
 	      vector <Orbital> &orbs);
 
 void read_dirac_out(string & outfilename,
@@ -443,7 +450,6 @@ void convert_arep_sorep_rrep(vector <Gaussian_pseudo_writer> & arep,
     }
 }
 
-
 void read_orb(vector <string> & orblines,
 	      vector <Gaussian_basis_set> & basis,
 	      vector <Atom> & atoms,
@@ -464,7 +470,12 @@ void read_orb(vector <string> & orblines,
     norbs *= 2;
     for (int mo = 0; mo < norbs; mo++) 
 	orbs.push_back(Orbital(basis));
-
+    for (int mo = 0; mo < norbs; mo++) {
+	for (int at = 0; at < atoms.size(); at++) {
+	    orbs[mo].label[at] = atoms[at].name;
+	}
+    }
+/*
     for (int mo = 0; mo < norbs; mo++) {
 	cout << "Orbital: " << mo << endl;
 	for (int at = 0; at < orbs[mo].natoms; at++) {
@@ -476,9 +487,32 @@ void read_orb(vector <string> & orblines,
 	    }
 	}
     }
+*/
+
+    int mo = 0;
+    vector <int> sit;
+    vector <int> pit;
+    vector <int> dit;
+    vector <int> fit;
+    vector <int> git;
+    vector <double> c(4);
+    for (int at = 0; at < orbs[0].natoms; at++) {
+        sit.push_back(0);
+        pit.push_back(0);
+        dit.push_back(0);
+        fit.push_back(0);
+        git.push_back(0);
+    }
 
     for (int i = 0; i < orblines.size(); i++) {
 	if (orblines[i].find("Electronic ") != orblines[i].npos) {
+            for (int at = 0; at < orbs[0].natoms; at++) {
+		sit[at] = 0;
+		pit[at] = 0;
+		dit[at] = 0;
+		fit[at] = 0;
+		git[at] = 0;
+	    }
 	    i += 2; 
 	    while (orblines[i].find("Electronic") == orblines[i].npos) {
 		if (orblines[i] == "") {
@@ -486,10 +520,143 @@ void read_orb(vector <string> & orblines,
 		    break;
 		}
 		words.clear(); parse(orblines[i],words);
+		c[0] = StringToNumber<double>(words[5]);
+		c[1] = StringToNumber<double>(words[6]);
+		c[2] = StringToNumber<double>(words[7]);
+		c[3] = StringToNumber<double>(words[8]);
+		for (int j = 0; j < 4; j++) cout << c[j] << " ";
+		cout << endl;
+		for (int at = 0; at < orbs[mo].natoms; at++) {
+		    if (words[2] == orbs[mo].label[at] && words[4] == "s") {
+			for (int j = 0; j < 4; j++) c[j] *= snorm;
+			orbs[mo].coeff[at][0][sit[at]] = (c[0],c[1]);
+			cout << "MO: " << mo << " At: " << at << " ||  " << sit[at] << " " << orbs[mo].coeff[at][0][sit[at]] << endl;
+			sit[at]++;
+			orbs[mo].coeff[at][0][sit[at]] = (c[2],c[3]);
+			cout << "MO: " << mo << " At: " << at << " ||  " << sit[at] << " " << orbs[mo].coeff[at][0][sit[at]] << endl;
+			sit[at]++;
+		    }
+		    else if (words[2] == orbs[mo].label[at] && 
+			    (words[4] == "px" || words[4] == "py" || words[4] == "pz")) {
+			for (int j = 0; j < 4; j++) c[j] *= pnorm;
+			if ((words[4] == "px" && pit[at]%6 == 0) ||
+			    (words[4] == "py" && pit[at]%6 == 2) ||
+			    (words[4] == "pz" && pit[at]%6 == 4)) {
+
+			    orbs[mo].coeff[at][1][pit[at]] = (c[0],c[1]);
+			    orbs[mo].coeff[at][1][pit[at]] = (c[2],c[3]);
+			    pit[at]++;
+
+			}
+			else {
+			    orbs[mo].coeff[at][1][pit[at]] = (0.0,0.0);
+			    pit[at]++;
+			    orbs[mo].coeff[at][1][pit[at]] = (0.0,0.0);
+			    pit[at]++;
+			}
+		    }
+		    else if (words[2] == orbs[mo].label[at] && (
+			     words[4] == "dxx" || words[4] == "dxy" || words[4] == "dxz" ||
+			     words[4] == "dyy" || words[4] == "dyz" || words[4] == "dzz")) {
+			for (int j = 0; j < 4; j++) c[j] *= dnorm;
+			if ((words[4] == "dxx" && dit[at]%12 == 0) ||
+			    (words[4] == "dxy" && dit[at]%12 == 2) ||
+			    (words[4] == "dxz" && dit[at]%12 == 4) ||
+			    (words[4] == "dyy" && dit[at]%12 == 6) ||
+			    (words[4] == "dyz" && dit[at]%12 == 8) ||
+			    (words[4] == "dzz" && dit[at]%12 == 10)) {
+
+			    orbs[mo].coeff[at][2][dit[at]] = (c[0],c[1]);
+			    dit[at]++;
+			    orbs[mo].coeff[at][2][dit[at]] = (c[2],c[3]);
+			    dit[at]++;
+
+			}
+			else {
+			    orbs[mo].coeff[at][2][dit[at]] = (0.0,0.0);
+			    dit[at]++;
+			    orbs[mo].coeff[at][2][dit[at]] = (0.0,0.0);
+			    dit[at]++;
+			}
+		    }
+		    else if (words[2] == orbs[mo].label[at] && (
+			     words[4] == "fxxx" || words[4] == "fxxy" || words[4] == "fxxz" ||
+			     words[4] == "fxyy" || words[4] == "fxyz" || words[4] == "fxzz" ||
+			     words[4] == "fyyy" || words[4] == "fyyz" || words[4] == "fyzz" ||
+			     words[4] == "fzzz" )) {
+			for (int j = 0; j < 4; j++) c[j] *= fnorm;
+			if ((words[4] == "fxxx" && fit[at]%20 == 0) ||
+			    (words[4] == "fxxy" && fit[at]%20 == 2) ||
+			    (words[4] == "fxxz" && fit[at]%20 == 4) ||
+			    (words[4] == "fxyy" && fit[at]%20 == 6) ||
+			    (words[4] == "fxyz" && fit[at]%20 == 8) ||
+			    (words[4] == "fxzz" && fit[at]%20 == 10) ||
+			    (words[4] == "fyyy" && fit[at]%20 == 12) ||
+			    (words[4] == "fyyz" && fit[at]%20 == 14) ||
+			    (words[4] == "fyzz" && fit[at]%20 == 16) ||
+			    (words[4] == "fzzz" && fit[at]%20 == 18)) {
+
+			    orbs[mo].coeff[at][3][fit[at]] = (c[0],c[1]);
+			    fit[at]++;
+			    orbs[mo].coeff[at][3][fit[at]] = (c[2],c[3]);
+			    fit[at]++;
+
+			}
+			else {
+			    orbs[mo].coeff[at][3][fit[at]] = (0.0,0.0);
+			    fit[at]++;
+			    orbs[mo].coeff[at][3][fit[at]] = (0.0,0.0);
+			    fit[at]++;
+			}
+		    }
+		    else if (words[2] == orbs[mo].label[at] && (
+			     words[4] == "g400" || words[4] == "g310" || words[4] == "g301" ||
+			     words[4] == "g220" || words[4] == "g211" || words[4] == "g202" ||
+			     words[4] == "g130" || words[4] == "g121" || words[4] == "g112" ||
+			     words[4] == "g103" || words[4] == "g040" || words[4] == "g031" ||
+			     words[4] == "g022" || words[4] == "g013" || words[4] == "g004")) {
+			for (int j = 0; j < 4; j++) c[j] *= gnorm;
+			if ((words[4] == "g400" && git[at]%30 == 0) ||
+			    (words[4] == "g310" && git[at]%30 == 2) ||
+			    (words[4] == "g301" && git[at]%30 == 4) ||
+			    (words[4] == "g220" && git[at]%30 == 6) ||
+			    (words[4] == "g211" && git[at]%30 == 8) ||
+			    (words[4] == "g202" && git[at]%30 == 10) ||
+			    (words[4] == "g130" && git[at]%30 == 12) ||
+			    (words[4] == "g121" && git[at]%30 == 14) ||
+			    (words[4] == "g112" && git[at]%30 == 16) ||
+			    (words[4] == "g103" && git[at]%30 == 18) ||
+			    (words[4] == "g040" && git[at]%30 == 20) ||
+			    (words[4] == "g031" && git[at]%30 == 22) ||
+			    (words[4] == "g022" && git[at]%30 == 24) ||
+			    (words[4] == "g013" && git[at]%30 == 26) ||
+			    (words[4] == "g004" && git[at]%30 == 28)) {
+
+			    orbs[mo].coeff[at][4][git[at]] = (c[0],c[1]);
+			    git[at]++;
+			    orbs[mo].coeff[at][4][git[at]] = (c[2],c[3]);
+			    git[at]++;
+
+			}
+			else {
+			    orbs[mo].coeff[at][4][git[at]] = (0.0,0.0);
+			    git[at]++;
+			    orbs[mo].coeff[at][4][git[at]] = (0.0,0.0);
+			    git[at]++;
+			}
+		    }
+		    else {
+			cout << "Error converting orbitals" << endl;
+			exit(1);
+		    }
+		}
 		if (i == orblines.size() - 1) break;
 		else i++;
 	    }
 	    i--;
+	    mo++;
+	    orbs[mo].kramers_pair(orbs[mo-1]);
+	    mo++;
 	}
     }
 }
@@ -553,7 +720,7 @@ void read_dirac_out(string & outfilename,
     }
 
     is.close(); is.clear();
-    for (int at = 0; at < atoms.size(); at++) 
+    for (int at = 0; at < atoms.size(); at++)  
 	arep[at].label = atoms[at].name;
 
     read_orb(orblines,basis,atoms,orbs);
