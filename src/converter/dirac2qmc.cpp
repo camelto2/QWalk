@@ -261,7 +261,16 @@ class Orbital {
 	    }
 	}
 	void kramers_pair(Orbital & old) {
-
+	    for (int at = 0; at < natoms; at++) {
+		for (int l = 0; l < coeff[at].size(); l++) {
+		    for (int i = 0; i < coeff[at][l].size(); i++) {
+			if ( i%2 == 0 ) {
+			    coeff[at][l][i] = complex<double>(-1.0,0.0)*conj(old.coeff[at][l][i+1]);
+			    coeff[at][l][i+1] = conj(old.coeff[at][l][i]);
+			}
+		    }
+		}
+	    }
 	}
 };
 
