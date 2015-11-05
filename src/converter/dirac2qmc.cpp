@@ -339,6 +339,8 @@ void write_to_basis(string output_root, vector <Gaussian_basis_set> & basis, vec
 
 void write_to_jast3(string output_root, vector <Atom> & atoms);
 
+void write_to_orb(string output_root, vector <Orbital> & orbs);
+
 //######################################################################
 
 int main(int argc, char ** argv) {
@@ -384,6 +386,7 @@ int main(int argc, char ** argv) {
     write_to_sys(output_root, atoms, rrep);
     write_to_basis(output_root, basis, atoms);
     write_to_jast3(output_root, atoms);
+    write_to_orb(output_root,orbs);
 
     return 0;    
 }
@@ -619,19 +622,6 @@ void read_orb(vector <string> & orblines,
 	    orbs[mo].label[at] = atoms[at].name;
 	}
     }
-/*
-    for (int mo = 0; mo < norbs; mo++) {
-	cout << "Orbital: " << mo << endl;
-	for (int at = 0; at < orbs[mo].natoms; at++) {
-	    cout << "    Atom: " << at << endl;
-	    for (int l = 0; l < orbs[mo].coeff[at].size(); l++) {
-		cout << "        Types: " << l << endl;
-		for (int j = 0; j < orbs[mo].coeff[at][l].size(); j++) 
-		    cout << "            " << orbs[mo].coeff[at][l][j] << endl;
-	    }
-	}
-    }
-*/
 
     int mo = 0;
     vector <int> sit;
@@ -954,4 +944,41 @@ void write_to_jast3(string output_root, vector <Atom> & atoms) {
     jast << "}" << endl;
 
     jast.close();
+}
+
+void write_to_orb(string output_root, vector <Orbital> & orbs) {
+
+    ofstream orb;
+    string orb_name = output_root+".orb";
+    orb.open(orb_name.c_str());
+
+    int count = 1;
+    int bas_count = 1;
+
+    for (int mo = 0; mo < orbs.size(); mo++) {
+	for (int at = 0; at < orbs[0].natoms; at++) {
+	    for (int l = 0; l < orbs[mo].coeff[at].size(); l++) {
+		for (int i = 0; i < orbs[mo].coeff[at][l].size(); i++) {
+		    orb << "     " << mo+1 << "     " << bas_count << "    " << at+1 << "     " << count << endl;
+		    bas_count++;
+		    count++;
+		}
+	    }
+	    bas_count = 1;
+	}
+    }
+
+    orb << "     COEFFICIENTS " << endl;
+    count = 0;
+    for (int mo = 0; mo < orbs.size(); mo++) {
+	for (int at = 0; at < orbs[0].natoms; at++) {
+	    for (int l = 0; l < orbs[mo].coeff[at].size(); l++) {
+		for (int i = 0; i < orbs[mo].coeff[at][l].size(); i++) {
+		    orb << "  " << orbs[mo].coeff[at][l][i];
+		    if (count%5 == 0 && count > 0) orb << endl;
+		    count++;
+		}
+	    }
+	}
+    }
 }
