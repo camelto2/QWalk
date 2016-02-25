@@ -386,7 +386,7 @@ int main(int argc, char ** argv) {
     write_to_sys(output_root, atoms, rrep);
     write_to_basis(output_root, basis, atoms);
     write_to_jast3(output_root, atoms);
-    write_to_orb(output_root,orbs);
+//    write_to_orb(output_root,orbs);
 
     return 0;    
 }
@@ -844,6 +844,7 @@ void read_dirac_out(string & outfilename,
                 skiplines(is,1);
 	    }
 	}
+/*	
 	// Orbitals
 	if (line.find("***** Vector print *****") != line.npos) {
 	    skiplines(is,12);
@@ -854,6 +855,7 @@ void read_dirac_out(string & outfilename,
 	    }
 	}
 	// Slater Determinants
+*/
     }
 
     is.close(); is.clear();
@@ -982,3 +984,4 @@ void write_to_orb(string output_root, vector <Orbital> & orbs) {
 	}
     }
 }
+

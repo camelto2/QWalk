@@ -92,7 +92,7 @@ sqd2qmc$(SUFFIX) : $(SQD2QMCOBJS)
 dirac2qmc$(SUFFIX) : $(DIRAC2QMCOBJS)
 	@echo ________________________________________________________________
 	@echo Linking $@
-	$(CXX) $(DEBUG) $(CXXFLAGS) -o dirac2qmc$(SUFFIX) $(LDFLAGS) $(BLAS_LIBS) $(DIRAC2QMCOBJS)
+	$(CXX) $(DEBUG) $(CXXFLAGS) -g -ggdb -o dirac2qmc$(SUFFIX) $(LDFLAGS) $(BLAS_LIBS) $(DIRAC2QMCOBJS)
 
 clean: 
 	@echo ________________________________________________________________
