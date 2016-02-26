@@ -673,6 +673,8 @@ doublevar Periodic_system::zeta() {
 }
 
 doublevar Periodic_system::ewaldEE(Sample_point * sample) {
+  sample->updateEEDist();
+  sample->updateEIDist();
 
   Array1 <doublevar> e1pos;
   Array1 <doublevar> e2pos;
@@ -693,6 +695,8 @@ doublevar Periodic_system::ewaldEE(Sample_point * sample) {
 }
 
 doublevar Periodic_system::ewaldII(Sample_point * sample) {
+  sample->updateEEDist();
+  sample->updateEIDist();
    
    Array1 <doublevar> i1pos;
    Array1 <doublevar> i2pos;
@@ -711,6 +715,8 @@ doublevar Periodic_system::ewaldII(Sample_point * sample) {
 }
 
 doublevar Periodic_system::ewaldEI(Sample_point * sample) {
+  sample->updateEEDist();
+  sample->updateEIDist();
 
     Array1 <doublevar> ipos;
     Array1 <doublevar> epos;
@@ -728,7 +734,6 @@ doublevar Periodic_system::ewaldEI(Sample_point * sample) {
 }
 
 doublevar Periodic_system::ewaldSelf(Sample_point * sample) {
-
 
     doublevar eself = 0.5*totnelectrons*zeta();
 
