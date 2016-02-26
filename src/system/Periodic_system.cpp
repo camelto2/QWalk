@@ -595,9 +595,152 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
   //cout << " ewalde " << ewalde << " xc_correction " << xc_correction << endl;
   //we do not want the xc_correction in the total energy in order to compare 
   //to all other qmc codes, it is still printed out so can be added by hand 
+
+    doublevar electronelectron = ewaldEE(sample);
+    doublevar ionion = ewaldII(sample);
+    doublevar electronion = ewaldEI(sample);
+    doublevar self = ewaldSelf(sample);
+
+    cout << endl;
+    cout << "QWalk Ewald:  " << ion_ewald+self_ii+self_ee+self_ei+ewalde << endl;
+    cout << "Fraser Ewald: " << electronelectron+ionion+electronion+self << endl;
+    cout << endl;
+
   return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
 }
 
+doublevar Periodic_system::psi(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2) {
+
+    Array1 <doublevar> rij(3);
+    for (int d = 0; d < 3; d++) rij(d) = pos1(d) - pos2(d);
+
+    doublevar recip = 0.0;
+    for (int gpt = 0; gpt < ngpoints; gpt++) {
+	doublevar gdotr = 0.0;
+	for (int d = 0; d < 3; d++) gdotr += gpoint(gpt,d)*rij(d);
+	recip += gweight(gpt)*cos(gdotr);
+    }
+
+    doublevar constpsi = -pi/alpha/alpha/cellVolume;
+
+    doublevar real = 0.0;
+    const int nlatvec=2;
+    for(int kk=-nlatvec; kk <=nlatvec; kk++) {
+      for(int jj=-nlatvec; jj <=nlatvec; jj++) {
+        for(int ii=-nlatvec; ii <=nlatvec; ii++) {
+	  Array1 <doublevar> r(3);
+	  r = 0;
+          for(int d=0; d< 3; d++) {
+            r(d) = rij(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+          }
+          doublevar r2 = r(0)*r(0) + r(1)*r(1) + r(2)*r(2);
+	  r2 = sqrt(r2);
+          real+=erfcm(alpha*r2)/r2;
+        }
+      }
+    }
+
+    return recip + constpsi + real;
+}
+
+doublevar Periodic_system::zeta() {
+
+    doublevar recip = 0.0;
+    for (int gpt = 0; gpt < ngpoints; gpt++) recip += gweight(gpt);
+
+    doublevar constzeta = 0.0;
+    constzeta = -pi/alpha/alpha/cellVolume;
+    constzeta -= 2.0*alpha/sqrt(pi);
+
+    doublevar real = 0.0;
+    const int nlatvec=2;
+    for(int kk=-nlatvec; kk <=nlatvec; kk++) {
+      for(int jj=-nlatvec; jj <=nlatvec; jj++) {
+        for(int ii=-nlatvec; ii <=nlatvec; ii++) {
+	  Array1 <doublevar> R(3);
+	  R = 0;
+          for(int d=0; d< 3; d++) {
+            R(d) = kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+          }
+          doublevar R2 = R(0)*R(0) + R(1)*R(1) + R(2)*R(2);
+	  R2 = sqrt(R2);
+          real += erfcm(alpha*R2)/R2;
+        }
+      }
+    }
+    
+    return recip + constzeta + real;
+}
+
+doublevar Periodic_system::ewaldEE(Sample_point * sample) {
+
+  Array1 <doublevar> e1pos;
+  Array1 <doublevar> e2pos;
+  doublevar sum = 0.0;
+  for (int e1 = 0; e1 < totnelectrons; e1++) {
+      for (int e2 = 0; e2 < totnelectrons; e2++) {
+	  if ( e1 != e2 ) {
+	     sample->getElectronPos(e1,e1pos);
+	     sample->getElectronPos(e2,e2pos);
+	     sum += psi(e1pos,e2pos);
+	  }
+      }
+  }
+  sum /= 2.0;
+
+  return sum;
+
+}
+
+doublevar Periodic_system::ewaldII(Sample_point * sample) {
+   
+   Array1 <doublevar> i1pos;
+   Array1 <doublevar> i2pos;
+   doublevar sum = 0.0;
+   for (int i1 = 0; i1 < ions.size(); i1++) {
+       for (int i2 = 0; i2 < ions.size(); i2++) {
+	   if ( i1 != i2 ) {
+	       sample->getIonPos(i1,i1pos);
+	       sample->getIonPos(i2,i2pos);
+	       sum += ions.charge(i1)*ions.charge(i2)*psi(i1pos,i2pos);
+	   }
+       }
+   }
+   sum /= 2.0;
+   return sum;
+}
+
+doublevar Periodic_system::ewaldEI(Sample_point * sample) {
+
+    Array1 <doublevar> ipos;
+    Array1 <doublevar> epos;
+    doublevar sum = 0.0;
+    for (int e = 0; e < totnelectrons; e++) {
+	for (int i = 0; i < ions.size(); i++) {
+            sample->getElectronPos(e,epos);
+	    sample->getIonPos(i,ipos);
+	    sum -= ions.charge(i)*psi(epos,ipos);
+	}
+    }
+
+   return sum;
+
+}
+
+doublevar Periodic_system::ewaldSelf(Sample_point * sample) {
+
+
+    doublevar eself = 0.5*totnelectrons*zeta();
+
+    doublevar chargesum = 0.0;
+    for (int i = 0; i < ions.size(); i++) chargesum += ions.charge(i)*ions.charge(i);
+    
+    doublevar iself = 0.5*chargesum*zeta();
+
+    return eself + iself;
+}
+
+//----------------------------------------------------------------------
 
 void Periodic_system::calcLocSeparated(Sample_point * sample, Array1 <doublevar> & totalv)
 {
