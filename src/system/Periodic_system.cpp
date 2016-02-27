@@ -602,8 +602,15 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
     doublevar self = ewaldSelf(sample);
 
     cout << endl;
+    cout << "xc:           " << xc_correction << endl;
+    cout << "QWalk + xc    " << ion_ewald+self_ii+self_ee+self_ei+ewalde+xc_correction << endl;
     cout << "QWalk Ewald:  " << ion_ewald+self_ii+self_ee+self_ei+ewalde << endl;
     cout << "Fraser Ewald: " << electronelectron+ionion+electronion+self << endl;
+    cout << "EE:           " << electronelectron << endl;
+    cout << "EI:           " << electronion << endl;
+    cout << "II:           " << ionion << endl;
+    cout << "SELF:         " << self<< endl;
+    cout << "Zeta:         " << zeta() << endl;
     cout << endl;
 
   return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
@@ -628,14 +635,14 @@ doublevar Periodic_system::psi(Array1 <doublevar> & pos1, Array1 <doublevar> & p
     for(int kk=-nlatvec; kk <=nlatvec; kk++) {
       for(int jj=-nlatvec; jj <=nlatvec; jj++) {
         for(int ii=-nlatvec; ii <=nlatvec; ii++) {
-	  Array1 <doublevar> r(3);
-	  r = 0;
+	  Array1 <doublevar> pos(3);
+	  pos = 0;
           for(int d=0; d< 3; d++) {
-            r(d) = rij(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+            pos(d) = rij(d)+kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
           }
-          doublevar r2 = r(0)*r(0) + r(1)*r(1) + r(2)*r(2);
-	  r2 = sqrt(r2);
-          real+=erfcm(alpha*r2)/r2;
+          doublevar r = pos(0)*pos(0) + pos(1)*pos(1) + pos(2)*pos(2);
+	  r= sqrt(r);
+          real+=erfcm(alpha*r)/r;
         }
       }
     }
@@ -657,14 +664,16 @@ doublevar Periodic_system::zeta() {
     for(int kk=-nlatvec; kk <=nlatvec; kk++) {
       for(int jj=-nlatvec; jj <=nlatvec; jj++) {
         for(int ii=-nlatvec; ii <=nlatvec; ii++) {
-	  Array1 <doublevar> R(3);
-	  R = 0;
-          for(int d=0; d< 3; d++) {
-            R(d) = kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
-          }
-          doublevar R2 = R(0)*R(0) + R(1)*R(1) + R(2)*R(2);
-	  R2 = sqrt(R2);
-          real += erfcm(alpha*R2)/R2;
+	  if ( ii != 0 && jj != 0 && kk != 0 ) {
+	    Array1 <doublevar> Rvec(3);
+	    Rvec = 0;
+            for(int d=0; d< 3; d++) {
+              Rvec(d) = kk*latVec(0,d)+jj*latVec(1,d)+ii*latVec(2,d);
+            }
+            doublevar r = Rvec(0)*Rvec(0) + Rvec(1)*Rvec(1) + Rvec(2)*Rvec(2);
+	    r = sqrt(r);
+            real += erfcm(alpha*r)/r;
+	  }
         }
       }
     }
@@ -676,8 +685,8 @@ doublevar Periodic_system::ewaldEE(Sample_point * sample) {
   sample->updateEEDist();
   sample->updateEIDist();
 
-  Array1 <doublevar> e1pos;
-  Array1 <doublevar> e2pos;
+  Array1 <doublevar> e1pos(3);
+  Array1 <doublevar> e2pos(3);
   doublevar sum = 0.0;
   for (int e1 = 0; e1 < totnelectrons; e1++) {
       for (int e2 = 0; e2 < totnelectrons; e2++) {
@@ -698,8 +707,8 @@ doublevar Periodic_system::ewaldII(Sample_point * sample) {
   sample->updateEEDist();
   sample->updateEIDist();
    
-   Array1 <doublevar> i1pos;
-   Array1 <doublevar> i2pos;
+   Array1 <doublevar> i1pos(3);
+   Array1 <doublevar> i2pos(3);
    doublevar sum = 0.0;
    for (int i1 = 0; i1 < ions.size(); i1++) {
        for (int i2 = 0; i2 < ions.size(); i2++) {
@@ -718,8 +727,8 @@ doublevar Periodic_system::ewaldEI(Sample_point * sample) {
   sample->updateEEDist();
   sample->updateEIDist();
 
-    Array1 <doublevar> ipos;
-    Array1 <doublevar> epos;
+    Array1 <doublevar> ipos(3);
+    Array1 <doublevar> epos(3);
     doublevar sum = 0.0;
     for (int e = 0; e < totnelectrons; e++) {
 	for (int i = 0; i < ions.size(); i++) {
