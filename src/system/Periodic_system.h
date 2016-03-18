@@ -209,12 +209,18 @@ private:
   doublevar minDistance(Array1 <doublevar> pos1, Array1 <doublevar> pos2, Array1 <doublevar> &rmin ); 
   Array1 <doublevar> ion_polarization;
 
+  // Fraser
     doublevar psi(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2);
     doublevar zeta();
     doublevar ewaldEE(Sample_point * sample);
     doublevar ewaldII(Sample_point * sample);
     doublevar ewaldEI(Sample_point * sample);
     doublevar ewaldSelf(Sample_point * sample);
+    
+  // Toukmaji
+  doublevar recip(Array1 <doublevar> & q, Array2 <doublevar> & r);
+  doublevar real(Array1 <doublevar> & q, Array2 <doublevar> & r);
+  doublevar constant(Array1 <doublevar> & q);
 
 };
 

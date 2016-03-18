@@ -595,16 +595,39 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
   //cout << " ewalde " << ewalde << " xc_correction " << xc_correction << endl;
   //we do not want the xc_correction in the total energy in order to compare 
   //to all other qmc codes, it is still printed out so can be added by hand 
-
+  
+  // Fraser
     doublevar electronelectron = ewaldEE(sample);
     doublevar ionion = ewaldII(sample);
     doublevar electronion = ewaldEI(sample);
     doublevar self = ewaldSelf(sample);
 
+  // Toukmaji
+    sample->updateEEDist();
+    sample->updateEIDist();
+    int totcharges = totnelectrons + ions.size();
+    Array1 <doublevar> charges(totcharges);
+    Array2 <doublevar> positions(totcharges,3);
+
+    for (int e = 0; e < totnelectrons; e++) {
+	charges(e) = -1.0;
+	Array1 <doublevar> pos(3);
+	sample->getElectronPos(e,pos);
+	for (int d = 0; d < 3; d++) positions(e,d) = pos(d);
+    }
+    for (int ion = totnelectrons; ion < totcharges; ion++) {
+	charges(ion) = ions.charge(ion-totnelectrons);
+	Array1 <doublevar> pos(3);
+	sample->getIonPos(ion-totnelectrons,pos);
+	for (int d = 0; d < 3; d++) positions(ion,d) = pos(d);
+    }
+
+
     cout << endl;
     cout << "xc:           " << xc_correction << endl;
     cout << "QWalk + xc    " << ion_ewald+self_ii+self_ee+self_ei+ewalde+xc_correction << endl;
     cout << "QWalk Ewald:  " << ion_ewald+self_ii+self_ee+self_ei+ewalde << endl;
+    cout << "Toukmaji:     " << recip(charges,positions) + real(charges,positions) + constant(charges) << endl;
     cout << "Fraser Ewald: " << electronelectron+ionion+electronion+self << endl;
     cout << "EE:           " << electronelectron << endl;
     cout << "EI:           " << electronion << endl;
@@ -614,6 +637,78 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
     cout << endl;
 
   return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
+
+    //fraser
+    //return electronelectron+ionion+electronion+self;
+}
+
+doublevar Periodic_system::recip(Array1 <doublevar> & q, Array2 <doublevar> & r) {
+
+    Array1 <doublevar> rij(3);
+    doublevar gdotr;
+    doublevar sum = 0.0;
+    for (int i = 0; i < q.GetDim(0); i++) {
+	for (int j = 0; j < q.GetDim(0); j++) {
+	    for (int g = 0; g < ngpoints; g++) {
+		gdotr = 0.0;
+		for (int d = 0; d < 3; d++) { 
+		    rij(d) = r(i,d) - r(j,d);
+		    gdotr += gpoint(g,d)*rij(d);
+		}
+		sum += q(i)*q(j)*gweight(g)*cos(gdotr);
+	    }
+	}
+    }
+  //  sum /= 2.0;
+  //  need to multiply by 2 for +G / -G symmetry
+
+    return sum;
+
+}
+
+doublevar Periodic_system::real(Array1 <doublevar> & q, Array2 <doublevar> & r) {
+
+    Array1 <doublevar> rijn(3);
+    const int nlatvec = 2;
+    doublevar sum = 0.0;
+    for (int kk = -nlatvec; kk <= nlatvec; kk++) {
+	for (int jj = -nlatvec; jj <= nlatvec; jj++) {
+	    for (int ii = -nlatvec; ii <= nlatvec; ii++) {
+		for (int i = 0; i < q.GetDim(0); i++) {
+		    for (int j = 0; j < q.GetDim(0); j++) {
+			if (!( ii == 0 && jj == 0 && kk == 0 && i == j )) {
+			    rijn = 0.0;
+			    doublevar rmag = 0.0;
+			    for (int d = 0; d < 3; d++) {
+				rijn(d) = r(i,d) - r(j,d);
+				rijn(d) += kk*latVec(0,d);
+				rijn(d) += jj*latVec(1,d);
+				rijn(d) += ii*latVec(2,d);
+				rmag += rijn(d)*rijn(d);
+			    }
+			    rmag = sqrt(rmag);
+			    sum += q(i)*q(j)*erfcm(alpha*rmag)/rmag;
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+    sum /= 2.0;
+
+    return sum;
+
+}
+
+doublevar Periodic_system::constant(Array1 <doublevar> & q) {
+    
+    doublevar sum = 0.0;
+    for (int i = 0; i < q.GetDim(0); i++) 
+	sum += q(i)*q(i);
+    sum *= -alpha/sqrt(pi);
+
+    return sum;
 }
 
 doublevar Periodic_system::psi(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2) {
@@ -647,7 +742,8 @@ doublevar Periodic_system::psi(Array1 <doublevar> & pos1, Array1 <doublevar> & p
       }
     }
 
-    return recip + constpsi + real;
+    return 2.0*recip + constpsi + real;
+    // multiply by two on recip for symmetry +G / -G
 }
 
 doublevar Periodic_system::zeta() {
@@ -678,7 +774,8 @@ doublevar Periodic_system::zeta() {
       }
     }
     
-    return recip + constzeta + real;
+    return 2.0*recip + constzeta + real;
+    //G symmetry
 }
 
 doublevar Periodic_system::ewaldEE(Sample_point * sample) {
