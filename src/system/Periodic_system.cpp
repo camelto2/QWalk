@@ -669,7 +669,7 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
         return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
     }
     else {//2D
-	cout << ewaldEE(sample) + ewaldII(sample) + ewaldEI(sample) + ewaldSelf(sample) << endl;
+	//cout << ewaldEE(sample) + ewaldII(sample) + ewaldEI(sample) + ewaldSelf(sample) << endl;
 	return ewaldEE(sample) + ewaldII(sample) + ewaldEI(sample) + ewaldSelf(sample); //2D EWald
     }
 
