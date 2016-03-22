@@ -217,10 +217,11 @@ private:
     doublevar ewaldEI(Sample_point * sample);
     doublevar ewaldSelf(Sample_point * sample);
     
-  // Toukmaji
-  doublevar recip(Array1 <doublevar> & q, Array2 <doublevar> & r);
-  doublevar real(Array1 <doublevar> & q, Array2 <doublevar> & r);
-  doublevar constant(Array1 <doublevar> & q);
+  //2D Ewald
+  int dim2;
+  doublevar psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2);
+  doublevar zeta2d();
+  doublevar cellArea;
 
 };
 
