@@ -652,6 +652,7 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
         //we do not want the xc_correction in the total energy in order to compare 
         //to all other qmc codes, it is still printed out so can be added by hand 
         
+	/*
         // Fraser
         doublevar electronelectron = ewaldEE(sample);
         doublevar ionion = ewaldII(sample);
@@ -665,12 +666,16 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
         cout << "QWalk Ewald:  " << ion_ewald+self_ii+self_ee+self_ei+ewalde << endl;
         cout << "Fraser Ewald: " << electronelectron+ionion+electronion+self << endl;
         cout << endl;
+	*/
     
         return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
     }
     else {//2D
-	//cout << ewaldEE(sample) + ewaldII(sample) + ewaldEI(sample) + ewaldSelf(sample) << endl;
-	return ewaldEE(sample) + ewaldII(sample) + ewaldEI(sample) + ewaldSelf(sample); //2D EWald
+        doublevar electronelectron = ewaldEE(sample);
+        doublevar electronion = ewaldEI(sample);
+	doublevar ionion = ewaldII(sample);
+	doublevar self = ewaldSelf(sample);
+	return electronelectron+electronion+self+ionion; //2D EWald
     }
 
 }
@@ -723,7 +728,7 @@ doublevar Periodic_system::psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> &
 	    pos = rij;
 	    doublevar r = 0;
 	    for (int d = 0; d < 2; d++) {
-		pos(d) += ii*latVec(0,d) + jj*latVec(1,d);
+		pos(d) -= ii*latVec(0,d) + jj*latVec(1,d);
 	    }
 	    for (int d = 0; d < 3; d++) 
 		r += pos(d)*pos(d);
@@ -733,9 +738,10 @@ doublevar Periodic_system::psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> &
     }
 
     doublevar constant = 0;
-    constant = pos1(3)*erf(rij(3)*alpha);
-    constant += exp(-rij(3)*pos1(3)*alpha*alpha)/alpha/sqrt(pi);
+    constant = rij(3)*erf(rij(3)*alpha);
+    constant += exp(-rij(3)*rij(3)*alpha*alpha)/alpha/sqrt(pi);
     constant *= -2*pi/cellArea;
+
 
     doublevar recip = 0;
     for (int gpt = 0; gpt < ngpoints; gpt++) {
@@ -807,7 +813,7 @@ doublevar Periodic_system::zeta2d() {
     }
 
     doublevar constant = 0;
-    constant -= (2*alpha/sqrt(pi) + 2*sqrt(pi)/alpha/cellArea);
+    constant -= 2*alpha/sqrt(pi) + 2*sqrt(pi)/alpha/cellArea;
 
     doublevar recip = 0;
     for (int gpt = 0; gpt < ngpoints; gpt ++) {
@@ -832,10 +838,7 @@ doublevar Periodic_system::ewaldEE(Sample_point * sample) {
 	  if ( e1 != e2 ) {
 	     sample->getElectronPos(e1,e1pos);
 	     sample->getElectronPos(e2,e2pos);
-	     if (dim2 == 0) //3D
-	         sum += psi(e1pos,e2pos);
-	     else
-		 sum += psi2d(e1pos,e2pos);
+             sum += psi2d(e1pos,e2pos);
 	  }
       }
   }
@@ -845,9 +848,7 @@ doublevar Periodic_system::ewaldEE(Sample_point * sample) {
 
 }
 
-doublevar Periodic_system::ewaldII(Sample_point * sample) {
-  sample->updateEEDist();
-  sample->updateEIDist();
+doublevar Periodic_system::ewaldII() {
    
    Array1 <doublevar> i1pos(3);
    Array1 <doublevar> i2pos(3);
@@ -857,10 +858,7 @@ doublevar Periodic_system::ewaldII(Sample_point * sample) {
 	   if ( i1 != i2 ) {
 	       sample->getIonPos(i1,i1pos);
 	       sample->getIonPos(i2,i2pos);
-	       if (dim2 == 0) //3D
-	           sum += ions.charge(i1)*ions.charge(i2)*psi(i1pos,i2pos);
-	       else // 2D
-	           sum += ions.charge(i1)*ions.charge(i2)*psi2d(i1pos,i2pos);
+	       sum += ions.charge(i1)*ions.charge(i2)*psi2d(i1pos,i2pos);
 	   }
        }
    }
@@ -879,31 +877,23 @@ doublevar Periodic_system::ewaldEI(Sample_point * sample) {
 	for (int i = 0; i < ions.size(); i++) {
             sample->getElectronPos(e,epos);
 	    sample->getIonPos(i,ipos);
-	    if (dim2 == 0) 
-	        sum -= ions.charge(i)*psi(epos,ipos);
-	    else // 2D
-	        sum -= ions.charge(i)*psi2d(epos,ipos);
+	    sum -= ions.charge(i)*psi2d(epos,ipos);
 	}
     }
 
    return sum;
 }
 
-doublevar Periodic_system::ewaldSelf(Sample_point * sample) {
+doublevar Periodic_system::ewaldSelf() {
 
     doublevar eself, iself;
-    if (dim2 == 0) // 3D
-        eself = 0.5*totnelectrons*zeta();
-    else // 2D
-        eself = 0.5*totnelectrons*zeta2d();
+    doublevar z = zeta2d();
+    eself = 0.5*totnelectrons*z;
 
     doublevar chargesum = 0.0;
     for (int i = 0; i < ions.size(); i++) chargesum += ions.charge(i)*ions.charge(i);
     
-    if (dim2 == 0) // 3D
-        iself = 0.5*chargesum*zeta();
-    else
-        iself = 0.5*chargesum*zeta2d();
+    iself = 0.5*chargesum*z;
 
     return eself + iself;
 }
