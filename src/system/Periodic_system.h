@@ -213,7 +213,7 @@ private:
     doublevar psi(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2);
     doublevar zeta();
     doublevar ewaldEE(Sample_point * sample);
-    doublevar ewaldII(Sample point * sample);
+    doublevar ewaldII(Sample_point * sample);
     doublevar ewaldEI(Sample_point * sample);
     doublevar ewaldSelf(Sample_point * sample);
     

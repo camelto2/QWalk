@@ -848,7 +848,7 @@ doublevar Periodic_system::ewaldEE(Sample_point * sample) {
 
 }
 
-doublevar Periodic_system::ewaldII() {
+doublevar Periodic_system::ewaldII(Sample_point * sample) {
    
    Array1 <doublevar> i1pos(3);
    Array1 <doublevar> i2pos(3);
@@ -884,7 +884,7 @@ doublevar Periodic_system::ewaldEI(Sample_point * sample) {
    return sum;
 }
 
-doublevar Periodic_system::ewaldSelf() {
+doublevar Periodic_system::ewaldSelf(Sample_point * sample) {
 
     doublevar eself, iself;
     doublevar z = zeta2d();
