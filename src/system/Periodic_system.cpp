@@ -164,8 +164,8 @@ int Periodic_system::read(vector <string> & words,
   //2D
   dim2 = 0;
   if (latVec(2,0) == 0 && latVec(2,1) == 0 && latVec(2,2) == 100) {
-      cout << "NOTICE: Detected the 3rd lattice vector as <0,0,100>" << endl;
-      cout << "Running as a 2D system with 2D ewald sums" << endl;
+      single_write(cout,"Detected the 3rd lattice vector as (0,0,100)\n");
+      single_write(cout,"Running as a 2D system with 2D ewald sums\n");
       dim2 = 1;
   }
 
@@ -259,11 +259,12 @@ int Periodic_system::read(vector <string> & words,
   debug_write(cout, "cell volume ", det,"\n");
   cellVolume=det;
   if (dim2 == 1) {
-      cellArea = 0;
-      cellArea += crossProduct(2,0)*crossProduct(2,0);
-      cellArea += crossProduct(2,1)*crossProduct(2,1);
-      cellArea += crossProduct(2,2)*crossProduct(2,2);
-      cellArea = sqrt(cellArea);
+      cellVolume = 0;
+      cellVolume += crossProduct(2,0)*crossProduct(2,0);
+      cellVolume += crossProduct(2,1)*crossProduct(2,1);
+      cellVolume += crossProduct(2,2)*crossProduct(2,2);
+      cellVolume = sqrt(cellVolume);
+      single_write(cout,"cell Area: ", cellVolume, "\n");
   }
 
   for(int i=0; i< ndim; i++) {
@@ -365,6 +366,7 @@ int Periodic_system::read(vector <string> & words,
   debug_write(cout, "elsu ", smallestheight,"\n");
 
   alpha=5.0/smallestheight; //Heuristic?  Stolen from Lubos's code.
+  single_write(cout, "alpha ", alpha, "\n");
 
   debug_write(cout, "alpha ", alpha, "\n");
 
@@ -373,98 +375,84 @@ int Periodic_system::read(vector <string> & words,
   //
  //  ngpoints=27*ewald_gmax*ewald_gmax*ewald_gmax ;
   ngpoints=0;
-  if ( dim2 == 0 ) { // is 3D
-    for(int ig=0; ig <= ewald_gmax; ig++) {
-      int jgmin=-ewald_gmax;
-      if(ig==0) jgmin=0;
-      for(int jg=jgmin; jg <= ewald_gmax; jg++) {
-        int kgmin=-ewald_gmax;
-        if(ig==0 && jg==0) kgmin=0;
-        for(int kg=kgmin; kg <= ewald_gmax; kg++) {
-          doublevar gsqrd=0;
-          for(int i=0; i< ndim; i++) {
-            doublevar tmp=2*pi*(ig*recipLatVec(0,i)
-                                         +jg*recipLatVec(1,i)
-                                         +kg*recipLatVec(2,i));
-            gsqrd+=tmp*tmp;
-          }
-          if(4.0 * pi*exp(-gsqrd/(4*alpha*alpha))
-                                 /(cellVolume*gsqrd) > 1e-10) ngpoints++;
+  for(int ig=0; ig <= ewald_gmax; ig++) {
+    int jgmin=-ewald_gmax;
+    if(ig==0) jgmin=0;
+    for(int jg=jgmin; jg <= ewald_gmax; jg++) {
+      int kgmin=-ewald_gmax;
+      if(ig==0 && jg==0) kgmin=0;
+      for(int kg=kgmin; kg <= ewald_gmax && dim2 == 0; kg++) {
+        doublevar gsqrd=0;
+        for(int i=0; i< ndim; i++) {
+	  if (dim2 == 1) recipLatVec(2,i) = 0;
+          doublevar tmp=2*pi*(ig*recipLatVec(0,i)
+                                       +jg*recipLatVec(1,i)
+                                       +kg*recipLatVec(2,i));
+          gsqrd+=tmp*tmp;
         }
+        if(4.0 * pi*exp(-gsqrd/(4*alpha*alpha))
+                               /(cellVolume*gsqrd) > 1e-10) ngpoints++;
       }
-    }
-    gpoint.Resize(ngpoints, 3);
-    gweight.Resize(ngpoints);
-    int currgpt=0;
-    for(int ig=0; ig <= ewald_gmax; ig++) {
-      int jgmin=-ewald_gmax;
-      if(ig==0) jgmin=0;
-      for(int jg=jgmin; jg <= ewald_gmax; jg++) {
-        int kgmin=-ewald_gmax;
-        if(ig==0 && jg==0) kgmin=0;
-        for(int kg=kgmin; kg <= ewald_gmax; kg++) {
-          for(int i=0; i< ndim; i++) {
-            gpoint(currgpt, i)=2*pi*(ig*recipLatVec(0,i)
-                                         +jg*recipLatVec(1,i)
-                                         +kg*recipLatVec(2,i));
-          }
-          //cout << "there" << endl;
-          doublevar gsqrd=0; //|g|^2
-          for(int i=0; i< ndim; i++) {
-            gsqrd+=gpoint(currgpt,i)*gpoint(currgpt,i);
-          }
-
-          if(gsqrd > 1e-8) {
-            gweight(currgpt)=4.0 * pi*exp(-gsqrd/(4*alpha*alpha))
-                                 /(cellVolume*gsqrd);
-            if(gweight(currgpt) > 1e-10) { //
-              currgpt++;
-            }
-          }
-        }
+      if (dim2 == 1) {
+	  doublevar gmag = 0;
+	  for (int i = 0; i < 2; i++) {
+              doublevar tmp=2*pi*(ig*recipLatVec(0,i)
+                                           +jg*recipLatVec(1,i));
+              gmag+=tmp*tmp;
+	  }
+	  gmag = sqrt(gmag);
+	  if (pi/cellVolume/gmag > 5.e-3) ngpoints++;
       }
     }
   }
-  else { //is 2D
-   for(int ig=0; ig <= ewald_gmax; ig++) {
-     int jgmin=-ewald_gmax;
-     if(ig==0) jgmin=0;
-     for(int jg=jgmin; jg <= ewald_gmax; jg++) {
-       doublevar gsqrd=0;
-       for(int i=0; i < 2; i++) {
-         doublevar tmp=2*pi*(ig*recipLatVec(0,i)
-                                      +jg*recipLatVec(1,i));
-         gsqrd+=tmp*tmp;
-       }
-       if( pi/sqrt(gsqrd)/cellArea > 1e-10) ngpoints++;
-      }
-    }
-    gpoint.Resize(ngpoints,2);
-    gweight.Resize(ngpoints);
-    int currgpt=0;
-    for(int ig=0; ig <= ewald_gmax; ig++) {
-      int jgmin=-ewald_gmax;
-      if(ig==0) jgmin=0;
-      for(int jg=jgmin; jg <= ewald_gmax; jg++) {
-        for(int i=0; i< 2; i++) {
+  gpoint.Resize(ngpoints, 3);
+  gweight.Resize(ngpoints);
+  int currgpt=0;
+  for(int ig=0; ig <= ewald_gmax; ig++) {
+    int jgmin=-ewald_gmax;
+    if(ig==0) jgmin=0;
+    for(int jg=jgmin; jg <= ewald_gmax; jg++) {
+      int kgmin=-ewald_gmax;
+      if(ig==0 && jg==0) kgmin=0;
+      for(int kg=kgmin; kg <= ewald_gmax && dim2 == 0; kg++) {
+        for(int i=0; i< ndim; i++) {
           gpoint(currgpt, i)=2*pi*(ig*recipLatVec(0,i)
-                                       +jg*recipLatVec(1,i));
+                                       +jg*recipLatVec(1,i)
+                                       +kg*recipLatVec(2,i));
         }
         //cout << "there" << endl;
         doublevar gsqrd=0; //|g|^2
-        for(int i=0; i< 2; i++) {
+        for(int i=0; i< ndim; i++) {
           gsqrd+=gpoint(currgpt,i)*gpoint(currgpt,i);
         }
 
         if(gsqrd > 1e-8) {
-          gweight(currgpt)=pi/sqrt(gsqrd)/cellArea;
+          gweight(currgpt)=4.0 * pi*exp(-gsqrd/(4*alpha*alpha))
+                               /(cellVolume*gsqrd);
           if(gweight(currgpt) > 1e-10) { //
             currgpt++;
           }
         }
       }
+      if (dim2 == 1) {
+        for(int i=0; i< 2; i++) {
+          gpoint(currgpt, i)=2*pi*(ig*recipLatVec(0,i)
+                                       +jg*recipLatVec(1,i));
+        }
+	gpoint(currgpt,2) = 0;
+	doublevar gmag = 0;
+	for (int i = 0; i < 2; i++) {
+	    gmag += gpoint(currgpt,i)*gpoint(currgpt,i);
+	}
+	gmag = sqrt(gmag);
+        if(gmag*gmag > 1e-8) {
+	    gweight(currgpt) = pi/cellVolume/gmag;
+	    if (gweight(currgpt) > 5.e-3) currgpt++;
+        }
+      }
     }
   }
+  
   //Array2 <doublevar> gpointtemp(ngpoints,3);
   //Array1 <doublevar> gweighttemp(ngpoints);
   
@@ -508,6 +496,12 @@ int Periodic_system::read(vector <string> & words,
     for(int d=0; d< 3; d++) {
       ion_polarization(d)+=ion_pos(d)*ions.charge(at) ;
     }
+  }
+
+
+  if (dim2 == 1) {
+      self_ei = ewaldSelf();
+      ion_ewald = ewaldII();
   }
 
   return 1;
@@ -673,9 +667,7 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
     else {//2D
         doublevar electronelectron = ewaldEE(sample);
         doublevar electronion = ewaldEI(sample);
-	doublevar ionion = ewaldII(sample);
-	doublevar self = ewaldSelf(sample);
-	return electronelectron+electronion+self+ionion; //2D EWald
+	return electronelectron+electronion+self_ei+ion_ewald; //2D EWald
     }
 
 }
@@ -721,7 +713,7 @@ doublevar Periodic_system::psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> &
     for (int d = 0; d < 3; d++) rij(d) = pos1(d) - pos2(d);
 
     doublevar real = 0;
-    const int nlatvec = 2;
+    const int nlatvec = 4;
     for (int ii = -nlatvec; ii <= nlatvec; ii++) {
 	for (int jj = -nlatvec; jj <= nlatvec; jj++) {
 	    Array1 <doublevar> pos(3);
@@ -738,23 +730,31 @@ doublevar Periodic_system::psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> &
     }
 
     doublevar constant = 0;
-    constant = rij(3)*erf(rij(3)*alpha);
-    constant += exp(-rij(3)*rij(3)*alpha*alpha)/alpha/sqrt(pi);
-    constant *= -2*pi/cellArea;
-
+    constant = rij(2)*erf(rij(2)*alpha);
+    constant += exp(-rij(2)*rij(2)*alpha*alpha)/alpha/sqrt(pi);
+    constant *= -2*pi/cellVolume;
 
     doublevar recip = 0;
     for (int gpt = 0; gpt < ngpoints; gpt++) {
 	doublevar gdotr = 0;
 	doublevar gmag = 0;
 	for (int d = 0; d < 2; d++) {
-	    gdotr = gpoint(gpt,d)*rij(d);
+	    gdotr += gpoint(gpt,d)*rij(d);
 	    gmag += gpoint(gpt,d)*gpoint(gpt,d);
 	}
 	gmag = sqrt(gmag);
-	doublevar tmp = 0;
-	tmp = exp(-gmag*rij(3))*erfcm(gmag/2/alpha - rij(3)*alpha);
-	tmp += exp(gmag*rij(3))*erfcm(gmag/2/alpha + rij(3)*alpha);
+	doublevar tmp;
+	doublevar argp,argm;
+	doublevar z = abs(rij(2));
+	argp = gmag/2/alpha + z*alpha;
+	argm = gmag/2/alpha - z*alpha;
+	if (gmag*z < 500) {
+	    tmp = exp(-gmag*z)*erfc(argm) + exp(gmag*z)*erfc(argp);
+	}
+	else {
+	    tmp = exp(-gmag*z-argm*argm)/sqrt(pi)*(2*alpha/gmag+4*z*alpha*alpha*alpha/gmag/gmag);
+	    tmp += exp(gmag*z-argp*argp)/sqrt(pi)*(2*alpha/gmag-4*z*alpha*alpha*alpha/gmag/gmag);
+	}
 	recip += gweight(gpt)*tmp*cos(gdotr);
     }
     return 2.0*recip + constant + real;
@@ -795,7 +795,7 @@ doublevar Periodic_system::zeta() {
 doublevar Periodic_system::zeta2d() {
 
     doublevar real = 0;
-    const int nlatvec = 2;
+    const int nlatvec = 4;
     for (int ii = -nlatvec; ii <= nlatvec; ii++) {
 	for (int jj = -nlatvec; jj <= nlatvec; jj++) {
 	    if ( ii != 0 && jj != 0) {
@@ -813,14 +813,14 @@ doublevar Periodic_system::zeta2d() {
     }
 
     doublevar constant = 0;
-    constant -= 2*alpha/sqrt(pi) + 2*sqrt(pi)/alpha/cellArea;
+    constant -= 2*alpha/sqrt(pi) + 2*sqrt(pi)/alpha/cellVolume;
 
     doublevar recip = 0;
     for (int gpt = 0; gpt < ngpoints; gpt ++) {
 	doublevar gmag = 0;
 	for (int d = 0; d < 2; d++) gmag += gpoint(gpt,d)*gpoint(gpt,d);
 	gmag = sqrt(gmag);
-	recip += 2.0*gweight(gpt)*erfcm(gmag/alpha/2);
+	recip += 2.0*gweight(gpt)*erfc(gmag/alpha/2);
     }
 
     return 2.0*recip + constant + real;
@@ -848,16 +848,18 @@ doublevar Periodic_system::ewaldEE(Sample_point * sample) {
 
 }
 
-doublevar Periodic_system::ewaldII(Sample_point * sample) {
-   
+doublevar Periodic_system::ewaldII() {
+
    Array1 <doublevar> i1pos(3);
    Array1 <doublevar> i2pos(3);
    doublevar sum = 0.0;
    for (int i1 = 0; i1 < ions.size(); i1++) {
        for (int i2 = 0; i2 < ions.size(); i2++) {
 	   if ( i1 != i2 ) {
-	       sample->getIonPos(i1,i1pos);
-	       sample->getIonPos(i2,i2pos);
+	       for (int d = 0; d < 3; d++) {
+		   i1pos(d) = ions.r(d,i1);
+		   i2pos(d) = ions.r(d,i2);
+	       }
 	       sum += ions.charge(i1)*ions.charge(i2)*psi2d(i1pos,i2pos);
 	   }
        }
@@ -884,7 +886,7 @@ doublevar Periodic_system::ewaldEI(Sample_point * sample) {
    return sum;
 }
 
-doublevar Periodic_system::ewaldSelf(Sample_point * sample) {
+doublevar Periodic_system::ewaldSelf() {
 
     doublevar eself, iself;
     doublevar z = zeta2d();

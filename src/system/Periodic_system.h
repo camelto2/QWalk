@@ -210,18 +210,17 @@ private:
   Array1 <doublevar> ion_polarization;
 
   // Fraser
-    doublevar psi(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2);
-    doublevar zeta();
-    doublevar ewaldEE(Sample_point * sample);
-    doublevar ewaldII(Sample_point * sample);
-    doublevar ewaldEI(Sample_point * sample);
-    doublevar ewaldSelf(Sample_point * sample);
+  doublevar psi(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2);
+  doublevar zeta();
+  doublevar ewaldEE(Sample_point * sample);
+  doublevar ewaldII();
+  doublevar ewaldEI(Sample_point * sample);
+  doublevar ewaldSelf();
     
   //2D Ewald
   int dim2;
   doublevar psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2);
   doublevar zeta2d();
-  doublevar cellArea;
 };
 
 
