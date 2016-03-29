@@ -384,14 +384,14 @@ int Periodic_system::read(vector <string> & words,
       for(int kg=kgmin; kg <= ewald_gmax && dim2 == 0; kg++) {
         doublevar gsqrd=0;
         for(int i=0; i< ndim; i++) {
-	  if (dim2 == 1) recipLatVec(2,i) = 0;
           doublevar tmp=2*pi*(ig*recipLatVec(0,i)
                                        +jg*recipLatVec(1,i)
                                        +kg*recipLatVec(2,i));
           gsqrd+=tmp*tmp;
         }
         if(4.0 * pi*exp(-gsqrd/(4*alpha*alpha))
-                               /(cellVolume*gsqrd) > 1e-10) ngpoints++;
+                               /(cellVolume*gsqrd) > 1e-10)  { ngpoints++;
+	}
       }
       if (dim2 == 1) {
 	  doublevar gmag = 0;
@@ -401,7 +401,7 @@ int Periodic_system::read(vector <string> & words,
               gmag+=tmp*tmp;
 	  }
 	  gmag = sqrt(gmag);
-	  if (pi/cellVolume/gmag > 5.e-3) ngpoints++;
+          if (pi/cellVolume/gmag > 5.e-3) ngpoints++;
       }
     }
   }
@@ -452,7 +452,7 @@ int Periodic_system::read(vector <string> & words,
       }
     }
   }
-  
+
   //Array2 <doublevar> gpointtemp(ngpoints,3);
   //Array1 <doublevar> gweighttemp(ngpoints);
   
