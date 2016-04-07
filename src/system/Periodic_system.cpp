@@ -366,15 +366,15 @@ int Periodic_system::read(vector <string> & words,
   debug_write(cout, "elsu ", smallestheight,"\n");
 
   alpha=5.0/smallestheight; //Heuristic?  Stolen from Lubos's code.
-  single_write(cout, "alpha ", alpha, "\n");
 
-  debug_write(cout, "alpha ", alpha, "\n");
+  single_write(cout, "alpha ", alpha, "\n");
 
   ///--------------------------------------------
   // Finding the g-points for the Ewald sum
   //
  //  ngpoints=27*ewald_gmax*ewald_gmax*ewald_gmax ;
   ngpoints=0;
+  doublevar thresh = 1.e-4;
   for(int ig=0; ig <= ewald_gmax; ig++) {
     int jgmin=-ewald_gmax;
     if(ig==0) jgmin=0;
@@ -401,7 +401,7 @@ int Periodic_system::read(vector <string> & words,
               gmag+=tmp*tmp;
 	  }
 	  gmag = sqrt(gmag);
-          if (pi/cellVolume/gmag > 5.e-3) ngpoints++;
+          if (pi/cellVolume/gmag > thresh) ngpoints++;
       }
     }
   }
@@ -447,7 +447,7 @@ int Periodic_system::read(vector <string> & words,
 	gmag = sqrt(gmag);
         if(gmag*gmag > 1e-8) {
 	    gweight(currgpt) = pi/cellVolume/gmag;
-	    if (gweight(currgpt) > 5.e-3) currgpt++;
+	    if (gweight(currgpt) > thresh) currgpt++;
         }
       }
     }
@@ -503,6 +503,9 @@ int Periodic_system::read(vector <string> & words,
       self_ei = ewaldSelf();
       ion_ewald = ewaldII();
   }
+
+  cout << "Total Number of Electrons: " << totnelectrons << endl;
+  single_write(cout,"Madelung Energy': ",setprecision(11),ion_ewald + self_ei - totnelectrons*0.5*zeta2d(),"\n");
 
   return 1;
 }
@@ -725,7 +728,7 @@ doublevar Periodic_system::psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> &
 	    for (int d = 0; d < 3; d++) 
 		r += pos(d)*pos(d);
 	    r = sqrt(r);
-	    real += erfcm(r*alpha)/r;
+	    real += erfc(r*alpha)/r;
 	}
     }
 
@@ -807,7 +810,7 @@ doublevar Periodic_system::zeta2d() {
 		    R += Rvec(d)*Rvec(d);
 		}
 		R = sqrt(R);
-		real += erfcm(alpha*R)/R;
+		real += erfc(alpha*R)/R;
 	    }
 	}
     }

@@ -51,12 +51,12 @@ public:
       fclose(fp);
       is1=int(fabs(is1%1000000000+0.0));
       is2=int(fabs(is2%1000000000+0.0));
-      
     }
     //cout << "is1 " << is1 << "is2 " << is2 << endl;
     
     iset=0;
     gset=.1;
+
   }
 
   void seed(long int is1_,long int is2_)
