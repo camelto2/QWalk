@@ -374,7 +374,7 @@ int Periodic_system::read(vector <string> & words,
   //
  //  ngpoints=27*ewald_gmax*ewald_gmax*ewald_gmax ;
   ngpoints=0;
-  doublevar thresh = 1.e-4;
+  doublevar thresh = 5.e-3;
   for(int ig=0; ig <= ewald_gmax; ig++) {
     int jgmin=-ewald_gmax;
     if(ig==0) jgmin=0;
@@ -506,6 +506,25 @@ int Periodic_system::read(vector <string> & words,
 
   cout << "Total Number of Electrons: " << totnelectrons << endl;
   single_write(cout,"Madelung Energy': ",setprecision(11),ion_ewald + self_ei - totnelectrons*0.5*zeta2d(),"\n");
+
+
+  doublevar dist = 0;
+  int ii,jj;
+  for (int at1 = 0; at1 < natoms; at1++) {
+      for (int at2 = 1; at2 < natoms; at2++) {
+          doublevar tmp = 0;
+	  tmp = ions.r(2,at1) - ions.r(2,at2);
+	  tmp *= tmp;
+	  tmp = sqrt(tmp);
+	  if (tmp >= dist) {
+	      ii = at1;
+	      jj = at2;
+	      dist = tmp;
+	  }
+      }
+  }
+  z0 = min(ions.r(2,ii),ions.r(2,jj));
+  z0 += 0.5*dist;
 
   return 1;
 }
@@ -670,7 +689,8 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
     else {//2D
         doublevar electronelectron = ewaldEE(sample);
         doublevar electronion = ewaldEI(sample);
-	return electronelectron+electronion+self_ei+ion_ewald; //2D EWald
+	doublevar background = sheet_background(sample);
+	return electronelectron+electronion+self_ei+ion_ewald + background; //2D EWald
     }
 
 }
@@ -716,7 +736,7 @@ doublevar Periodic_system::psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> &
     for (int d = 0; d < 3; d++) rij(d) = pos1(d) - pos2(d);
 
     doublevar real = 0;
-    const int nlatvec = 4;
+    const int nlatvec = 2;
     for (int ii = -nlatvec; ii <= nlatvec; ii++) {
 	for (int jj = -nlatvec; jj <= nlatvec; jj++) {
 	    Array1 <doublevar> pos(3);
@@ -798,7 +818,7 @@ doublevar Periodic_system::zeta() {
 doublevar Periodic_system::zeta2d() {
 
     doublevar real = 0;
-    const int nlatvec = 4;
+    const int nlatvec = 2;
     for (int ii = -nlatvec; ii <= nlatvec; ii++) {
 	for (int jj = -nlatvec; jj <= nlatvec; jj++) {
 	    if ( ii != 0 && jj != 0) {
@@ -901,6 +921,29 @@ doublevar Periodic_system::ewaldSelf() {
     iself = 0.5*chargesum*z;
 
     return eself + iself;
+}
+
+doublevar Periodic_system::sheet_background(Sample_point * sample) {
+    sample->updateEEDist();
+    sample->updateEIDist();
+
+    doublevar q = 0;
+    for (int at = 0; at < ions.size(); at++) {
+        q += ions.charge(at);
+    }
+    q -= totnelectrons;
+
+    doublevar tmp = 0;
+    for (int at = 0; at < ions.size(); at++) 
+	tmp += ions.charge(at)*abs(ions.r(2,at)-z0);
+    for (int e = 0; e < totnelectrons; e++) {
+	Array1 <doublevar> epos(3);
+	sample->getElectronPos(e,epos);
+	tmp -= abs(epos(2)-z0);
+    }
+    tmp *= 2.0*pi*q/cellVolume;
+
+    return tmp;
 }
 
 //----------------------------------------------------------------------
