@@ -668,7 +668,8 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
     else {//2D
         doublevar electronelectron = ewaldEE(sample);
         doublevar electronion = ewaldEI(sample);
-	return electronelectron+electronion+self_ei+ion_ewald; //2D EWald
+	doublevar bkgrnd = background(sample);
+	return electronelectron+electronion+self_ei+ion_ewald+bkgrnd; //2D EWald
     }
 
 }
@@ -885,6 +886,7 @@ doublevar Periodic_system::ewaldEI(Sample_point * sample) {
     }
 
    return sum;
+
 }
 
 doublevar Periodic_system::ewaldSelf() {
@@ -899,6 +901,12 @@ doublevar Periodic_system::ewaldSelf() {
     iself = 0.5*chargesum*z;
 
     return eself + iself;
+
+}
+
+doublevar Periodic_system::background(Sample_point * sample) {
+
+
 }
 
 //----------------------------------------------------------------------

@@ -221,6 +221,7 @@ private:
   int dim2;
   doublevar psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> & pos2);
   doublevar zeta2d();
+  doublevar background_terms(Sample_point * sample);
 };
 
 
