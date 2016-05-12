@@ -256,7 +256,6 @@ int Periodic_system::read(vector <string> & words,
   doublevar det=Determinant(latVec, ndim);
 
   if(det <0) det*=-1;
-  debug_write(cout, "cell volume ", det,"\n");
   cellVolume=det;
   if (dim2 == 1) {
       cellVolume = 0;
@@ -264,7 +263,6 @@ int Periodic_system::read(vector <string> & words,
       cellVolume += crossProduct(2,1)*crossProduct(2,1);
       cellVolume += crossProduct(2,2)*crossProduct(2,2);
       cellVolume = sqrt(cellVolume);
-      single_write(cout,"cell Area: ", cellVolume, "\n");
   }
 
   for(int i=0; i< ndim; i++) {
@@ -272,6 +270,7 @@ int Periodic_system::read(vector <string> & words,
       recipLatVec(i,j)=crossProduct(i,j)/det;
     }
   }
+  single_write(cout, "cell volume ", cellVolume,"\n");
 
   //------------primitive lattice vectors (for polarization calculation)
   if(readsection(words, pos=0, latvectxt, "PRIMLATTICEVEC")) { 
@@ -374,7 +373,7 @@ int Periodic_system::read(vector <string> & words,
   //
  //  ngpoints=27*ewald_gmax*ewald_gmax*ewald_gmax ;
   ngpoints=0;
-  doublevar thresh = 1.e-4;
+  doublevar thresh = 5.e-3;
   for(int ig=0; ig <= ewald_gmax; ig++) {
     int jgmin=-ewald_gmax;
     if(ig==0) jgmin=0;
@@ -504,8 +503,7 @@ int Periodic_system::read(vector <string> & words,
       ion_ewald = ewaldII();
   }
 
-  cout << "Total Number of Electrons: " << totnelectrons << endl;
-  single_write(cout,"Madelung Energy': ",setprecision(11),ion_ewald + self_ei - totnelectrons*0.5*zeta2d(),"\n");
+  single_write(cout,"Madelung Energy (should match scf): ",setprecision(11),ion_ewald + self_ei - totnelectrons*0.5*zeta2d(),"\n");
 
   return 1;
 }
@@ -716,7 +714,7 @@ doublevar Periodic_system::psi2d(Array1 <doublevar> & pos1, Array1 <doublevar> &
     for (int d = 0; d < 3; d++) rij(d) = pos1(d) - pos2(d);
 
     doublevar real = 0;
-    const int nlatvec = 4;
+    const int nlatvec = 2;
     for (int ii = -nlatvec; ii <= nlatvec; ii++) {
 	for (int jj = -nlatvec; jj <= nlatvec; jj++) {
 	    Array1 <doublevar> pos(3);
@@ -798,7 +796,7 @@ doublevar Periodic_system::zeta() {
 doublevar Periodic_system::zeta2d() {
 
     doublevar real = 0;
-    const int nlatvec = 4;
+    const int nlatvec = 2;
     for (int ii = -nlatvec; ii <= nlatvec; ii++) {
 	for (int jj = -nlatvec; jj <= nlatvec; jj++) {
 	    if ( ii != 0 && jj != 0) {
