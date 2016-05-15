@@ -114,12 +114,10 @@ int Periodic_system::read(vector <string> & words,
   int startpos=pos;
 
   vector <string> bckgrnd;
-  if(!readsection(words,pos,bckgrnd,"BACKGROUND SLAB HEIGHT")) {
-      error("Need BACKGROUND SLAB HEIGHT in system");
+  if(!readsection(words,pos,bckgrnd,"BACKGROUND_SLAB_HEIGHT")) {
+      error("Need BACKGROUND_SLAB_HEIGHT in system");
   }
   h=atoi(bckgrnd[0].c_str());
-  single_write(cout,"height: ",h,"\n");
-
 
   vector <string> latvectxt;
 
@@ -959,7 +957,7 @@ doublevar Periodic_system::background(Sample_point * sample) {
 	Array1 <doublevar> pos(3);
 	sample->getElectronPos(e,pos);
 	if (pos(2) > z0-0.5*h && pos(2) < z0+0.5*h)
-	    tmp -= 2.0/q/h*sqrt((pos(2)-z0)*(pos(2)-z0));
+	    tmp -= 2.0/q/h*(pos(2)-z0)*(pos(2)-z0);
 	else
 	    tmp -= 2.0/q*sqrt((pos(2)-z0)*(pos(2)-z0));
     }
