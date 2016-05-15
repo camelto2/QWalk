@@ -113,6 +113,14 @@ int Periodic_system::read(vector <string> & words,
   const int ndim=3;
   int startpos=pos;
 
+  vector <string> bckgrnd;
+  if(!readsection(words,pos,bckgrnd,"BACKGROUND SLAB HEIGHT")) {
+      error("Need BACKGROUND SLAB HEIGHT in system");
+  }
+  h=atoi(bckgrnd[0].c_str());
+  single_write(cout,"height: ",h,"\n");
+
+
   vector <string> latvectxt;
 
   vector <string> spintxt;
@@ -504,6 +512,24 @@ int Periodic_system::read(vector <string> & words,
   }
 
   single_write(cout,"Madelung Energy (should match scf): ",setprecision(11),ion_ewald + self_ei - totnelectrons*0.5*zeta2d(),"\n");
+
+  doublevar dist = 0;
+  int ii,jj;
+  for (int at1 = 0; at1 < natoms; at1++) {
+    for (int at2 = 1; at2 < natoms; at2++) {
+      doublevar tmp = 0;
+      tmp = ions.r(2,at1) - ions.r(2,at2);
+      tmp *= tmp;
+      tmp = sqrt(tmp);
+      if (tmp >= dist) {
+        ii = at1;
+        jj = at2;
+        dist = tmp;
+      }
+    }
+  }
+  z0 = min(ions.r(2,ii),ions.r(2,jj));
+  z0 += 0.5*dist;
 
   return 1;
 }
@@ -906,6 +932,42 @@ doublevar Periodic_system::ewaldSelf() {
 
 doublevar Periodic_system::background(Sample_point * sample) {
 
+    sample->updateEEDist();
+    sample->updateEIDist();
+
+    doublevar q = 0;
+    doublevar qin = 0;
+    for (int at = 0; at < ions.size(); at++) { 
+	q += ions.charge(at);
+	if (ions.r(2,at) > z0-0.5*h && ions.r(2,at) < z0+0.5*h) qin += ions.charge(at);
+    }
+    for (int e = 0; e < totnelectrons; e++) {
+	Array1 <doublevar> pos(3);
+	sample->getElectronPos(e,pos);
+	q -= 1;
+	if(pos(2) > z0-0.5*h && pos(2) < z0+0.5*h) qin -= 1;
+    }
+
+    doublevar tmp = 0;
+    for (int at = 0; at < ions.size(); at++) {
+	if (ions.r(2,at) > z0-0.5*h && ions.r(2,at) < z0+0.5*h)
+	    tmp += 2.0/q/h*ions.charge(at)*(ions.r(2,at)-z0)*(ions.r(2,at)-z0);
+	else
+	    tmp += 2.0/q*ions.charge(at)*sqrt((ions.r(2,at)-z0)*(ions.r(2,at)-z0));
+    }
+    for (int e = 0; e < totnelectrons; e++) {
+	Array1 <doublevar> pos(3);
+	sample->getElectronPos(e,pos);
+	if (pos(2) > z0-0.5*h && pos(2) < z0+0.5*h)
+	    tmp -= 2.0/q/h*sqrt((pos(2)-z0)*(pos(2)-z0));
+	else
+	    tmp -= 2.0/q*sqrt((pos(2)-z0)*(pos(2)-z0));
+    }
+    tmp -= h/3;
+    tmp += 0.5*h*qin/q;
+    tmp *= pi*q*q*cellVolume;
+	
+    return tmp;
 
 }
 
