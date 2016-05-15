@@ -951,7 +951,7 @@ doublevar Periodic_system::background(Sample_point * sample) {
 	if (ions.r(2,at) > z0-0.5*h && ions.r(2,at) < z0+0.5*h)
 	    tmp += 2.0/q/h*ions.charge(at)*(ions.r(2,at)-z0)*(ions.r(2,at)-z0);
 	else
-	    tmp += 2.0/q*ions.charge(at)*sqrt((ions.r(2,at)-z0)*(ions.r(2,at)-z0));
+	    tmp += 2.0/q*ions.charge(at)*abs(ions.r(2,at)-z0);
     }
     for (int e = 0; e < totnelectrons; e++) {
 	Array1 <doublevar> pos(3);
@@ -959,11 +959,11 @@ doublevar Periodic_system::background(Sample_point * sample) {
 	if (pos(2) > z0-0.5*h && pos(2) < z0+0.5*h)
 	    tmp -= 2.0/q/h*(pos(2)-z0)*(pos(2)-z0);
 	else
-	    tmp -= 2.0/q*sqrt((pos(2)-z0)*(pos(2)-z0));
+	    tmp -= 2.0/q*abs(pos(2)-z0);
     }
     tmp -= h/3;
     tmp += 0.5*h*qin/q;
-    tmp *= pi*q*q*cellVolume;
+    tmp *= pi*q*q/cellVolume;
 	
     return tmp;
 
