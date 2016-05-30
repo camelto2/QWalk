@@ -504,6 +504,8 @@ int Periodic_system::read(vector <string> & words,
   }
 
   single_write(cout,"Madelung Energy (should match scf): ",setprecision(11),ion_ewald + self_ei - totnelectrons*0.5*zeta2d(),"\n");
+  single_write(cout,"zeta: ",zeta2d(),"\n");
+  single_write(cout,"Self Energy: ",self_ei,"\n");
 
   return 1;
 }
