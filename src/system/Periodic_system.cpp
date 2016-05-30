@@ -927,21 +927,30 @@ doublevar Periodic_system::sheet_background(Sample_point * sample) {
     sample->updateEEDist();
     sample->updateEIDist();
 
-    doublevar q = 0;
-    for (int at = 0; at < ions.size(); at++) {
-        q += ions.charge(at);
-    }
-    q -= totnelectrons;
-
     doublevar tmp = 0;
-    for (int at = 0; at < ions.size(); at++) 
-	tmp += ions.charge(at)*abs(ions.r(2,at)-z0);
+    for (int at = 0; at < ions.size(); at++) {
+	for (int at1 = 0; at1 < ions.size(); at1++) {
+	    tmp += ions.charge(at)*ions.charge(at1)*abs(ions.r(2,at)-ions.r(2,at1));
+	}
+	for (int e = 0; e < totnelectrons; e++) {
+	    Array1 <doublevar> epos(3);
+	    sample->getElectronPos(e,epos);
+	    tmp -= ions.charge(at)*abs(epos(2) - ions.r(2,at));
+	}
+    }
     for (int e = 0; e < totnelectrons; e++) {
 	Array1 <doublevar> epos(3);
 	sample->getElectronPos(e,epos);
-	tmp -= abs(epos(2)-z0);
+        for (int at = 0; at < ions.size(); at++) {
+	    tmp -= ions.charge(at)*abs(epos(2) - ions.r(2,at));
+        }
+	for (int e1 = 0; e1 < totnelectrons; e1++) {
+	    Array1<doublevar> epos1(3);
+	    sample->getElectronPos(e1,epos1);
+	    tmp += abs(epos(2)-epos1(2));
+	}
     }
-    tmp *= 2.0*pi*q/cellVolume;
+    tmp *= pi/cellVolume;
 
     return tmp;
 }
