@@ -950,9 +950,11 @@ doublevar Periodic_system::sheet_background(Sample_point * sample) {
 	    tmp += abs(epos(2)-epos1(2));
 	}
     }
+
     tmp *= pi/cellVolume;
 
     return tmp;
+
 }
 
 //----------------------------------------------------------------------
