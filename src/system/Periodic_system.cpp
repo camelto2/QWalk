@@ -117,8 +117,10 @@ int Periodic_system::read(vector <string> & words,
   if(!readsection(words,pos,backgroundtxt, "GAUSSIAN_BACKGROUND_WIDTH")) {
       error("Need GAUSSIAN_BACKGROUND_SPIN");
   }
-  a0 = atoi(backgroundtxt[0].c_str());
-  single_write(cout,"Gaussian Background Width: ", a0,"\n");
+  doublevar h = atoi(backgroundtxt[0].c_str());
+  a0 = pow(2/h,2);
+  single_write(cout,"Gaussian Background Width: ", h, "\n");
+  single_write(cout,"Gaussian Background a0: ", a0,"\n");
 
   vector <string> latvectxt;
 
