@@ -927,30 +927,58 @@ doublevar Periodic_system::sheet_background(Sample_point * sample) {
     sample->updateEEDist();
     sample->updateEIDist();
 
+    doublevar total = 0;
     doublevar tmp = 0;
+    doublevar zij = 0;
     for (int at = 0; at < ions.size(); at++) {
 	for (int at1 = 0; at1 < ions.size(); at1++) {
-	    tmp += ions.charge(at)*ions.charge(at1)*abs(ions.r(2,at)-ions.r(2,at1));
+	    tmp = 0;
+	    zij = abs(ions.r(2,at)-ions.r(2,at1));
+	    tmp += sqrt(2)*exp(a0*zij*zij*0.5);
+	    tmp += sqrt(pi*a0)*zij*erf(sqrt(0.5*a0)*zij);
+	    tmp += 2*exp(-a0*zij*zij);
+	    tmp += 2*sqrt(pi*a0)*zij*erf(sqrt(a0)*zij);
+	    total += ions.charge(at)*ions.charge(at1)*tmp;
 	}
 	for (int e = 0; e < totnelectrons; e++) {
 	    Array1 <doublevar> epos(3);
 	    sample->getElectronPos(e,epos);
-	    tmp -= ions.charge(at)*abs(epos(2) - ions.r(2,at));
+	    tmp = 0;
+	    zij = abs(ions.r(2,at)-epos(2));
+	    tmp += sqrt(2)*exp(a0*zij*zij*0.5);
+	    tmp += sqrt(pi*a0)*zij*erf(sqrt(0.5*a0)*zij);
+	    tmp += 2*exp(-a0*zij*zij);
+	    tmp += 2*sqrt(pi*a0)*zij*erf(sqrt(a0)*zij);
+	    total -= ions.charge(at)*tmp;
 	}
     }
     for (int e = 0; e < totnelectrons; e++) {
 	Array1 <doublevar> epos(3);
 	sample->getElectronPos(e,epos);
         for (int at = 0; at < ions.size(); at++) {
-	    tmp -= ions.charge(at)*abs(epos(2) - ions.r(2,at));
+	    Array1 <doublevar> epos(3);
+	    sample->getElectronPos(e,epos);
+	    tmp = 0;
+	    zij = abs(ions.r(2,at)-epos(2));
+	    tmp += sqrt(2)*exp(a0*zij*zij*0.5);
+	    tmp += sqrt(pi*a0)*zij*erf(sqrt(0.5*a0)*zij);
+	    tmp += 2*exp(-a0*zij*zij);
+	    tmp += 2*sqrt(pi*a0)*zij*erf(sqrt(a0)*zij);
+	    total -= ions.charge(at)*tmp;
         }
 	for (int e1 = 0; e1 < totnelectrons; e1++) {
 	    Array1<doublevar> epos1(3);
 	    sample->getElectronPos(e1,epos1);
-	    tmp += abs(epos(2)-epos1(2));
+	    tmp = 0;
+	    zij = abs(epos(2)-epos1(2));
+	    tmp += sqrt(2)*exp(a0*zij*zij*0.5);
+	    tmp += sqrt(pi*a0)*zij*erf(sqrt(0.5*a0)*zij);
+	    tmp += 2*exp(-a0*zij*zij);
+	    tmp += 2*sqrt(pi*a0)*zij*erf(sqrt(a0)*zij);
+	    total += tmp;
 	}
     }
-    tmp *= pi/cellVolume;
+    tmp *= sqrt(pi/a0)/cellVolume;
 
     return tmp;
 }
