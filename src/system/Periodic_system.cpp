@@ -113,6 +113,13 @@ int Periodic_system::read(vector <string> & words,
   const int ndim=3;
   int startpos=pos;
 
+  vector <string> backgroundtxt;
+  if(!readsection(words,pos,backgroundtxt, "GAUSSIAN_BACKGROUND_WIDTH")) {
+      error("Need GAUSSIAN_BACKGROUND_SPIN");
+  }
+  a0 = atoi(backgroundtxt[0].c_str());
+  single_write(cout,"Gaussian Background Width: ", a0,"\n");
+
   vector <string> latvectxt;
 
   vector <string> spintxt;
@@ -507,25 +514,6 @@ int Periodic_system::read(vector <string> & words,
   cout << "Total Number of Electrons: " << totnelectrons << endl;
   single_write(cout,"Madelung Energy': ",setprecision(11),ion_ewald + self_ei - totnelectrons*0.5*zeta2d(),"\n");
 
-
-  doublevar dist = 0;
-  int ii,jj;
-  for (int at1 = 0; at1 < natoms; at1++) {
-      for (int at2 = 1; at2 < natoms; at2++) {
-          doublevar tmp = 0;
-	  tmp = ions.r(2,at1) - ions.r(2,at2);
-	  tmp *= tmp;
-	  tmp = sqrt(tmp);
-	  if (tmp >= dist) {
-	      ii = at1;
-	      jj = at2;
-	      dist = tmp;
-	  }
-      }
-  }
-  z0 = min(ions.r(2,ii),ions.r(2,jj));
-  z0 += 0.5*dist;
-
   return 1;
 }
 
@@ -689,7 +677,7 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
     else {//2D
         doublevar electronelectron = ewaldEE(sample);
         doublevar electronion = ewaldEI(sample);
-	doublevar background = sheet_background(sample);
+	doublevar background = dynamic_gaussian_background(sample);
 	return electronelectron+electronion+self_ei+ion_ewald + background; //2D EWald
     }
 
@@ -923,7 +911,7 @@ doublevar Periodic_system::ewaldSelf() {
     return eself + iself;
 }
 
-doublevar Periodic_system::sheet_background(Sample_point * sample) {
+doublevar Periodic_system::dynamic_gaussian_background(Sample_point * sample) {
     sample->updateEEDist();
     sample->updateEIDist();
 
