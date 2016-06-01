@@ -115,7 +115,7 @@ int Periodic_system::read(vector <string> & words,
 
   vector <string> backgroundtxt;
   if(!readsection(words,pos,backgroundtxt, "GAUSSIAN_BACKGROUND_WIDTH")) {
-      error("Need GAUSSIAN_BACKGROUND_SPIN");
+      error("Need GAUSSIAN_BACKGROUND_WIDTH");
   }
   doublevar h = atoi(backgroundtxt[0].c_str());
   a0 = pow(2/h,2);
