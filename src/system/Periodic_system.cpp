@@ -373,7 +373,7 @@ int Periodic_system::read(vector <string> & words,
   //
  //  ngpoints=27*ewald_gmax*ewald_gmax*ewald_gmax ;
   ngpoints=0;
-  doublevar thresh = 5.e-3;
+  doublevar thresh = 1.e-3;
   for(int ig=0; ig <= ewald_gmax; ig++) {
     int jgmin=-ewald_gmax;
     if(ig==0) jgmin=0;
