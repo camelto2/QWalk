@@ -29,6 +29,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "MO_matrix_basfunc.h"
 #include "MO_matrix_Cbasfunc.h"
 #include "MO_matrix_einspline.h"
+#include "MO_matrix_quaternion.h"
 #include <algorithm>
 
 int allocate(vector <string> & words, System * sys, MO_matrix *& moptr) {
@@ -64,6 +65,8 @@ int allocate(vector <string> & words, System * sys,
     moptr=new MO_matrix_cutoff<dcomplex>;
   else if(caseless_eq(words[0],"EINSPLINE_MO"))
     moptr=new MO_matrix_einspline<dcomplex>;
+  else if(caseless_eq(words[0],"QUATERNION_MO"))
+    moptr=new MO_matrix_quaternion;
   else 
     error("Unknown complex MO: ", words[0]);
 
