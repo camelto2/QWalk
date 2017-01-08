@@ -38,7 +38,8 @@ distances have been updated.  When you request them to be updated,
 it checks, and only does it if necessary.
 
 All distances are returned in the form \f$ [r, r^2, x, y,z] \f$
-
+NOTE
+If a spin-dependent calculation, is returns \f$ [r, r^2, x, y, z, s] \f$
 */
 class Sample_point
 {
@@ -100,9 +101,12 @@ public:
      broken.
    */
   virtual void translateElectron(const int e, const Array1 <doublevar> & trans) {
-    Array1 <doublevar> pos(3);
+    //CM
+    //Array1 <doublevar> pos(3);
+    int dim=trans.GetDim(0);
+    Array1<doublevar> pos(dim); //can now include spin translation
     getElectronPos(e,pos);
-    for(int d=0; d< 3; d++) 
+    for(int d=0; d< dim; d++) 
       pos(d)+=trans(d);
     setElectronPos(e,pos);
   }
@@ -242,6 +246,9 @@ public:
   virtual void saveUpdate(int e, Sample_storage *)=0;
   virtual void restoreUpdate(int e, Sample_storage *)=0;
 
+  //CM
+  int isdynspin; //dynamic spins
+
 protected:
   Wavefunction * wfObserver;
 };
@@ -283,8 +290,12 @@ class Config_save_point {
   void restorePos(Sample_point * sample);
   void mpiSend(int node);
   void mpiReceive(int node);
-  void getPos(int e, Array1 <doublevar> & r) { 
-    r=electronpos(e);
+ // void getPos(int e, Array1 <doublevar> & ) { 
+ //   r=electronpos(e);
+ // }
+ //Shouldn't the above have the r in the argument?
+  void getPos(int e, Array1 <doublevar> & r) {
+      r = electronpos(e);
   }
   void read(istream & is);
   void write(ostream & os);
@@ -295,6 +306,8 @@ class Config_save_point {
   int readBinary(FILE * f,int nelec, int ndim,doublevar & weight);
 
  private:
+  //CM
+  //electronpos will now carry spin as well
   Array1 <Array1 <doublevar> > electronpos;
 };
 #endif
