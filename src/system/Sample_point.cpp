@@ -168,7 +168,7 @@ void Config_save_point::read(istream & is) {
     electronpos(e).Resize(ndim);
   //CM
   //  for(int d=0; d< 3; d++) { 
-    for(int d=0; d < dim; d++) {
+    for(int d=0; d < ndim; d++) {
       is >> electronpos(e)(d);
     }
   }
