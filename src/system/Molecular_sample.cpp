@@ -27,18 +27,52 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 void Molecular_sample::generateStorage(Sample_storage * & store)
 {
-  int nions=parent->ions.size();
+  //CM
+  //int nions=parent->ions.size();
+  //store=new Sample_storage;
+  //store->iondist_temp.Resize(5,nions);
+  //store->pointdist_temp.Resize(5,nelectrons);
+  //store->pos_temp.Resize(3);
+  int dim;
+  if (isdynspin)
+    dim=6;
+  else
+    dim=5;
+  int nions = parent->ions.size();
   store=new Sample_storage;
-  store->iondist_temp.Resize(5,nions);
-  store->pointdist_temp.Resize(5,nelectrons);
-  store->pos_temp.Resize(3);
+  store->iondist_temp.Resize(dim,nions);
+  store->pointdist_temp.Resize(dim,nelectrons);
+  store->pos_temp.Resize(dim-2);
 }
 
 void Molecular_sample::saveUpdate(int e, Sample_storage * store) {
   //cout << "saveUpdate" << endl;
+  //CM
+  // getElectronPos(e, store->pos_temp);
+  // int nions=parent->ions.size();
+  // for(int d=0; d< 5; d++)
+  // {
+  //   for(int i=0; i< nions; i++)
+  //   {
+  //     store->iondist_temp(d,i)=iondist(d,i,e);
+  //   }
+  //   for(int i=0; i<e; i++)
+  //   {
+  //     store->pointdist_temp(d,i)=pointdist(d,i,e);
+  //   }
+  //   for(int j=e; j < nelectrons; j++)
+  //   {
+  //     store->pointdist_temp(d,j)=pointdist(d,e,j);
+  //   }
+  // }
+  int dim;
+  if (isdynspin)
+    dim=6;
+  else
+    dim=5;
   getElectronPos(e, store->pos_temp);
   int nions=parent->ions.size();
-  for(int d=0; d< 5; d++)
+  for(int d=0; d< dim; d++)
   {
     for(int i=0; i< nions; i++)
     {
@@ -58,12 +92,38 @@ void Molecular_sample::saveUpdate(int e, Sample_storage * store) {
 void Molecular_sample::restoreUpdate(int e, Sample_storage * store)
 {
   //cout << "restoreUpdate" << endl;
-  for(int i=0; i<3; i++)
+  //CM
+  //for(int i=0; i<3; i++)
+  //{
+  //  elecpos(e,i)=store->pos_temp(i);
+  //}
+  //int nions=parent->ions.size();
+  //for(int d=0; d< 5; d++)
+  //{
+  //  for(int i=0; i< nions; i++)
+  //  {
+  //    iondist(d,i,e)=store->iondist_temp(d,i);
+  //  }
+  //  for(int i=0; i<e; i++)
+  //  {
+  //    pointdist(d,i,e)=store->pointdist_temp(d,i);
+  //  }
+  //  for(int j=e; j < nelectrons; j++)
+  //  {
+  //    pointdist(d,e,j)=store->pointdist_temp(d,j);
+  //  }
+  //}
+  int dim;
+  if (isdynspin)
+      dim=4;
+  else
+      dim=3;
+  for(int i=0; i<dim; i++)
   {
     elecpos(e,i)=store->pos_temp(i);
   }
   int nions=parent->ions.size();
-  for(int d=0; d< 5; d++)
+  for(int d=0; d< dim+2; d++)
   {
     for(int i=0; i< nions; i++)
     {
@@ -97,13 +157,28 @@ void Molecular_sample::updateEIDist()
         iondist(1,j,e)=0;
       }
 
-      for(int i=0; i<3; i++)
-      {
-        for(int j=0; j<nions; j++)
-        {
+      //CM
+      //for(int i=0; i<3; i++)
+      //{
+      //  for(int j=0; j<nions; j++)
+      //  {
+      //    iondist(i+2,j,e)=elecpos(e,i)-parent->ions.r(i,j);
+      //    iondist(1,j,e)+=iondist(i+2, j, e) * iondist(i+2, j, e);
+      //  }
+      //}
+      for (int j = 0; j < nions; j++) {
+	for (int i = 0; i < 3; i++) {
           iondist(i+2,j,e)=elecpos(e,i)-parent->ions.r(i,j);
           iondist(1,j,e)+=iondist(i+2, j, e) * iondist(i+2, j, e);
-        }
+	}
+	//CM
+	//if we have dynamic spins, we also pass the spin.
+	//in the future, we could potentially include a nuclear 
+	//spin and include somehting like spin-spin coupling, and 
+	//then difference in the electron and nuclear spin would 
+	//be added here
+	if (isdynspin) 
+          iondist(5,j,e)=elecpos(e,5);
       }
 
       for(int j=0; j<nions; j++)
@@ -122,6 +197,12 @@ void Molecular_sample::updateEIDist()
 void Molecular_sample::updateEEDist()
 {
   //cout << "elecelecDistupdate" << endl;
+  //CM
+  //Let's include the difference in the spin for 2 electrons.
+  //Currently do not know a reason one would need it, but 
+  //just trying to be complete
+  int dim = 3;
+  if (isdynspin) dim = 4;
   for(int e=0; e< nelectrons; e++)
   {
     if(elecDistStale(e)==1)
@@ -136,8 +217,9 @@ void Molecular_sample::updateEEDist()
       {
         pointdist(1,e,k)=0;
       }
-
-      for(int i=0; i<3; i++)
+ //CM
+ //     for(int i=0; i<3; i++)
+      for (int i=0; i<dim; i++)
       {
         for(int j=0; j<e; j++)
         {
@@ -175,40 +257,65 @@ void Molecular_sample::init(System * sys) {
   recast(sys, parent); //assign sys to parent
 
   int nions=parent->ions.size();
-  nelectrons=parent->nelectrons(0)+parent->nelectrons(1);
+  //CM
+  //nelectrons=parent->nelectrons(0)+parent->nelectrons(1);
 
-  elecpos.Resize(nelectrons, 3);
+  //elecpos.Resize(nelectrons, 3);
+  //elecpos=0.0;
+  //iondist.Resize(5,nions,nelectrons);
+  //iondist=0.0;
+  //pointdist.Resize(5, nelectrons, nelectrons);
+  //pointdist=0.0;
+  //elecDistStale.Resize(nelectrons);
+  //ionDistStale.Resize(nelectrons);
+  //elecDistStale=1;
+  //ionDistStale=1;
+  int dim;
+  if (isdynspin) {
+      dim = 4;
+      nelectrons=parent->nelectrons(0);
+  }
+  else {
+      dim=3;
+      nelectrons=parent->nelectrons(0)+parent->nelectrons(1);
+  }
+  elecpos.Resize(nelectrons, dim);
   elecpos=0.0;
-  iondist.Resize(5,nions,nelectrons);
+  iondist.Resize(dim+2,nions,nelectrons);
   iondist=0.0;
-  pointdist.Resize(5, nelectrons, nelectrons);
+  pointdist.Resize(dim+2, nelectrons, nelectrons);
   pointdist=0.0;
   elecDistStale.Resize(nelectrons);
   ionDistStale.Resize(nelectrons);
   elecDistStale=1;
   ionDistStale=1;
+
 }
 
 
 
 void Molecular_sample::randomGuess()
 {
-  //cout << "randomGuess " << endl;
-  //here we set range equal to 3.0 or the value given in the System section
-  const doublevar range=parent->inirange; //range of the cube around atoms to fill
-  Array1 <doublevar> trialPos(3);
+  //CM
+  if (isdynspin) {
+    //here we set range equal to 3.0 or the value given in the System section
+    const doublevar range=parent->inirange; //range of the cube around atoms to fill
+    Array1 <doublevar> trialPos(4);
 
-  Array1 <doublevar> ioncenter(3); ioncenter=0;
-  for(int ion=0; ion < parent->ions.size(); ion++) {
-    for(int d=0;d < 3; d++) ioncenter(d)+=parent->ions.r(d,ion)/parent->ions.size();
-  }
-  
-  
-  int e=0;
-  //Try to put them around the ions
-  //cout << "nions " << ions.size() << endl;
-  for(int spin=0; spin < 2; spin++)
-  {
+    Array1 <doublevar> ioncenter(3); ioncenter=0;
+    for(int ion=0; ion < parent->ions.size(); ion++) {
+      for(int d=0;d < 3; d++) ioncenter(d)+=parent->ions.r(d,ion)/parent->ions.size();
+    }
+    
+    
+    int e=0;
+    //Try to put them around the ions
+    //cout << "nions " << ions.size() << endl;
+    //
+    //CM
+    //only one type of spin for dynspin calculations, so I simply removed that loop. 
+    //Hopefully this still works reasonably well
+    //Also, for spin variable, randomly put spin between 0 and 2pi
     for(int ion=0; ion< parent->ions.size(); ion++)
     {
       //cout << "charge " << parent->ions.charge(ion) << endl;
@@ -218,7 +325,7 @@ void Molecular_sample::randomGuess()
       //and rounded down for the second one.
 
       for(;
-          e-laste < int(parent->ions.charge(ion)/2)+(1-spin)*int(parent->ions.charge(ion))%2;
+          e-laste < int(parent->ions.charge(ion)/2)+int(parent->ions.charge(ion))%2;
           e++)
       {
         if(e< nelectrons) {
@@ -228,6 +335,7 @@ void Molecular_sample::randomGuess()
           {
             trialPos(d)=parent->ions.r(d,ion)+2*range*(rng.ulec()-.5);
           }
+	  trialPos(3)=2*pi*rng.ulec();
           setElectronPos(e,trialPos);          
             //elecpos(e,d)=parent->ions.r(d,ion)+2*range*(rng.ulec()-.5);
             //cout << "electron position " << e << "  " << d
@@ -236,18 +344,80 @@ void Molecular_sample::randomGuess()
         }
       }
     }
-  }
 
-
-  //Throw the rest randomly
-  for(;e<nelectrons; e++)
-  {
-    for(int d=0; d< 3; d++)
+    //Throw the rest randomly
+    for(;e<nelectrons; e++)
     {
-      trialPos(d)=4*range*(rng.ulec()-.5)+ioncenter(d);
-      //elecpos(e,d)=4*range*(rng.ulec()-.5);
+      for(int d=0; d< 3; d++)
+      {
+        trialPos(d)=4*range*(rng.ulec()-.5)+ioncenter(d);
+        //elecpos(e,d)=4*range*(rng.ulec()-.5);
+      }
+      trialPos(3)=2*pi*rng.ulec();
+      setElectronPos(e,trialPos);
     }
-    setElectronPos(e,trialPos);
+
+
+  }
+  else {
+    //cout << "randomGuess " << endl;
+    //here we set range equal to 3.0 or the value given in the System section
+    const doublevar range=parent->inirange; //range of the cube around atoms to fill
+    Array1 <doublevar> trialPos(3);
+
+    Array1 <doublevar> ioncenter(3); ioncenter=0;
+    for(int ion=0; ion < parent->ions.size(); ion++) {
+      for(int d=0;d < 3; d++) ioncenter(d)+=parent->ions.r(d,ion)/parent->ions.size();
+    }
+    
+    
+    int e=0;
+    //Try to put them around the ions
+    //cout << "nions " << ions.size() << endl;
+    for(int spin=0; spin < 2; spin++)
+    {
+      for(int ion=0; ion< parent->ions.size(); ion++)
+      {
+        //cout << "charge " << parent->ions.charge(ion) << endl;
+        int laste=e;
+
+        //putting half electrons, rounded up for the first iteration
+        //and rounded down for the second one.
+
+        for(;
+            e-laste < int(parent->ions.charge(ion)/2)+(1-spin)*int(parent->ions.charge(ion))%2;
+            e++)
+        {
+          if(e< nelectrons) {
+            //for(int d=0; d< 3; d++)
+            //{
+            for(int d=0; d< 3; d++)
+            {
+              trialPos(d)=parent->ions.r(d,ion)+2*range*(rng.ulec()-.5);
+            }
+            setElectronPos(e,trialPos);          
+              //elecpos(e,d)=parent->ions.r(d,ion)+2*range*(rng.ulec()-.5);
+              //cout << "electron position " << e << "  " << d
+              //     << "  " << elecpos(e,d) << endl;
+            //}
+          }
+        }
+      }
+    }
+
+
+    //Throw the rest randomly
+    for(;e<nelectrons; e++)
+    {
+      for(int d=0; d< 3; d++)
+      {
+        trialPos(d)=4*range*(rng.ulec()-.5)+ioncenter(d);
+        //elecpos(e,d)=4*range*(rng.ulec()-.5);
+      }
+      setElectronPos(e,trialPos);
+    }
+  
+  
   }
 
   ionDistStale=1;
@@ -265,14 +435,20 @@ void Molecular_sample::setElectronPos(const int e,
                                     const Array1 <doublevar> & position)
 {
   //cout << "setElectronPos" << endl;
-  assert( position.GetDim(0) == 3 );
+  //CM
+  if (isdynspin)
+    assert( position.GetDim(0) == 4 );
+  else
+    assert( position.GetDim(0) == 3 );
   Array1 <doublevar> temp(position.GetDim(0));
   temp=position;
   if(parent->use_bounding_box) {
     parent->bounding_box.enforcePbc(temp);
   }
 
-  for(int i=0; i<3; i++)
+ //CM
+ // for(int i=0; i<3; i++)
+  for (int i = 0; i<position.GetDim(0); i++)
   {
     elecpos(e,i) = temp(i);
   }
@@ -287,14 +463,21 @@ void Molecular_sample::setElectronPos(const int e,
 
 void Molecular_sample::setElectronPosNoNotify(const int e, 
                                     const Array1 <doublevar> & position) {
-  assert( position.GetDim(0) == 3 );
+  //CM
+  if (isdynspin)
+    assert( position.GetDim(0) == 4 );
+  else
+    assert( position.GetDim(0) == 3 );
   Array1 <doublevar> temp(position.GetDim(0));
   temp=position;
   if(parent->use_bounding_box) {
     parent->bounding_box.enforcePbc(temp);
   }
 
-  for(int i=0; i<3; i++)
+  //CM
+  int dim = position.GetDim(0);
+  //for(int i=0; i<3; i++)
+  for(int i=0; i<dim; i++)
   {
     elecpos(e,i) = temp(i);
   }
@@ -304,9 +487,15 @@ void Molecular_sample::setElectronPosNoNotify(const int e,
 
 void Molecular_sample::getElectronPos(const int e, Array1 <doublevar> & R){
     
-    assert( R.GetDim(0) >= 3 );
-    
-    for(int i=0; i< 3; i++) {
+    //CM
+    //assert( R.GetDim(0) >= 3 );
+    int dim=3;
+    if (isdynspin) dim=4;
+    assert( R.GetDim(0) >= dim);
+
+    //CM 
+    //for(int i=0; i< 3; i++) {
+    for (int i = 0; i < dim; i++) {
       R(i)=elecpos(e,i);
     }
     
@@ -352,8 +541,12 @@ void Molecular_sample::rawOutput(ostream & os)
     os << "\n";
   }
   os << "   numElectrons   " << nelectrons << endl;
+  //CM
+  int dim = elecpos.GetDim(1);
   for(int e=0; e< nelectrons; e++) {
-    for(int d=0; d< 3; d++) {
+    //CM
+    //for(int d=0; d< 3; d++) {
+    for (int d = 0; d < dim; d++) {
       os << setw(20) << setprecision(12) << elecpos(e,d);
     }
     os << "\n";
@@ -391,13 +584,19 @@ void Molecular_sample::rawInput(istream & is)
     error("expected numElectrons, got ", text);
 
   is >> nelectrons;
+  //CM
+  int dim = elecpos.GetDim(1);
   for(int e=0; e< nelectrons; e++) {
-    for(int d=0; d< 3; d++) {
+    //CM
+    //for(int d=0; d< 3; d++) {
+    for (int d=0; d < dim; d++) {
       is >> elecpos(e,d);
     }
   }
 
 
+  //CM
+  //no need to do anything here, leave the spins alone currently
   //shift the electronic positions if the ions have moved
   updateEIDist();
   for(int e=0; e< nelectrons; e++) {

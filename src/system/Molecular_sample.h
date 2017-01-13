@@ -102,11 +102,27 @@ public:
 
   void getEIDist(const int e,const int ion, Array1 <doublevar> & distance)
   {
-    assert( distance.GetDim(0) >= 5 );
-    assert( ! ionDistStale(e));
-    for(int i=0; i<5; i++)
-    {
-      distance(i)=iondist(i,ion,e);
+    //CM
+    // assert( distance.GetDim(0) >= 5 );
+    // assert( ! ionDistStale(e));
+    // for(int i=0; i<5; i++)
+    // {
+    //   distance(i)=iondist(i,ion,e);
+    // }
+    if (isdynspin) {
+      assert(distance.GetDim(0) >= 6);
+      assert(!ionDistStale(e));
+      for (int i = 0; i < 6; i++) {
+	distance(i)=iondist(i,ion,e);
+      }
+    }
+    else {
+      assert( distance.GetDim(0) >= 5 );
+      assert( ! ionDistStale(e));
+      for(int i=0; i<5; i++)
+      {
+        distance(i)=iondist(i,ion,e);
+      }
     }
   }
 
@@ -119,6 +135,9 @@ public:
       distance(1)+=distance(d+2)*distance(d+2);
     }
     distance(0)=sqrt(distance(1));
+    //CM
+    if (isdynspin) 
+	distance(5) = elecpos(e,5); //just pass the spin around even if not used
     return 1;
   }
 
@@ -126,9 +145,17 @@ public:
   {
     //cout << "getEEDist" << endl;
     assert(distance.GetDim(0) >= 5);
+    //CM
+    int dim;
+    if (isdynspin) {
+	assert(distance.GetDim(0) >= 6);
+	dim = 6;
+    }
+    else dim = 5;
     assert( ! elecDistStale(e1));
     assert( e1 < e2 );
-    for(int i=0; i< 5; i++)
+    // for(int i=0; i< 5; i++)
+    for (int i=0; i < dim; i++)
     {
       distance(i)=pointdist(i,e1,e2);
     }

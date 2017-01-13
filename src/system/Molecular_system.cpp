@@ -53,16 +53,35 @@ int Molecular_system::showinfo(ostream & os)
 int Molecular_system::read(vector <string> & words,
                            unsigned int & pos)
 {
-  nspin.Resize(2);
-  unsigned int startpos=pos;
+
+  //CM
+  //nspin.Resize(2);
+  //unsigned int startpos=pos;
+  //vector <string> spintxt;
+  //if(!readsection(words, pos, spintxt, "NSPIN")) {
+  //  error("Need NSPIN in molecular system");
+  //}
+  //nspin(0)=atoi(spintxt[0].c_str());
+  //nspin(1)=atoi(spintxt[1].c_str());
+  //
+  //If we see NSPIN { N } instead of NSPIN { NUP DWN }, then we are
+  //dealing with a dynamic spin calculation
+  unsigned int startpos = pos;
   vector <string> spintxt;
   if(!readsection(words, pos, spintxt, "NSPIN")) {
     error("Need NSPIN in molecular system");
   }
-  nspin(0)=atoi(spintxt[0].c_str());
-  nspin(1)=atoi(spintxt[1].c_str());
+  if (spintxt.size() == 1) {
+    nspin.Resize(1);
+    nspin(0) = atoi(spintxt[0].c_str());
+  }
+  else {
+    nspin.Resize(2);
+    nspin(0) = atoi(spintxt[0].c_str());
+    nspin(1) = atoi(spintxt[1].c_str());
+  }
 
-  //restrcit initial walkers to a given range
+  //restrict initial walkers to a given range
   vector <string> inirangetxt;
   if(readsection(words, pos=0, inirangetxt, "INIRANGE")) {
     cout << "You are using a range of initial walkers other than default." << endl;
@@ -164,16 +183,30 @@ void Molecular_system::calcLocWithTestPos(Sample_point * sample,
                                           Array1 <doublevar> & tpos,
                                           Array1 <doublevar> & Vtest) {
 
+
+  //CM
+  //Even though you do not need spin as part of the interaction, 
+  //if it is a dynamic spin calculation it will pass the spin as well
+  //So we have to have the oldpos be of the correct dimension such that 
+  //the getElectronPos functions can return it correctly
   int nions=sample->ionSize();
+  //CM
+  int isdynspin = sample->isdynspin;
   int nelectrons=sample->electronSize();
   Vtest.Resize(nelectrons + 1);
   Vtest = 0; 
   Array1 <doublevar> oldpos(3);
+  //CM
+  if (isdynspin) 
+      oldpos.Resize(4);
   //cout << "Calculating local energy\n";
   sample->getElectronPos(0, oldpos);
   sample->setElectronPosNoNotify(0, tpos);
   
   Array1 <doublevar> R(5);
+  //CM
+  if (isdynspin)
+      R.Resize(6);
 
   sample->updateEIDist();
   sample->updateEEDist();
@@ -189,6 +222,9 @@ void Molecular_system::calcLocWithTestPos(Sample_point * sample,
   dist = sqrt(dist); 
   Vtest(0) = 1/dist; 
   Array1 <doublevar> R2(5);
+  //CM
+  if (isdynspin)
+      R.Resize(6);
   for(int i=1; i< nelectrons; i++) {
     sample->getEEDist(0,i,R2);
     Vtest(i)= 1/R2(0);
@@ -212,7 +248,15 @@ doublevar Molecular_system::calcLoc(Sample_point * sample) {
 
   //cout << "Calculating local energy\n";
 
+  //CM
+  //If dynamic spin calculation, R is 6 dimensional, as
+  // r,r^2,x,y,z,s
   Array1 <doublevar> R(5);
+  //CM
+  int isdynspin = sample->isdynspin;
+  if (isdynspin) 
+      R.Resize(6);
+
   doublevar pot=0;
   
   doublevar elecIon=0;
@@ -253,6 +297,10 @@ doublevar Molecular_system::calcLoc(Sample_point * sample) {
 
   doublevar elecElec=0;
   Array1 <doublevar> R2(5);
+  //CM
+  if (isdynspin)
+      R2.Resize(6);
+
   for(int i=0; i< nelectrons; i++)
   {
     for(int j=0; j<i; j++)
@@ -267,6 +315,9 @@ doublevar Molecular_system::calcLoc(Sample_point * sample) {
 
   doublevar fieldPot=0;
   Array1 <doublevar> pos(3);
+  //CM
+  if (isdynspin)
+      pos.Resize(4); // x,y,z,s
   for(int e=0; e< nelectrons; e++) {
     sample->getElectronPos(e,pos);
     for(int d=0; d< 3; d++) 
@@ -351,6 +402,11 @@ void Molecular_system::separatedLocal(Sample_point * sample,Array1 <doublevar> &
   twobody.Resize(nelectrons,nelectrons);
   onebody=0.0; twobody=0.0;
   Array1 <doublevar> R(5);
+  //CM
+  //R will be passed as 6 item Array with r,r2,x,y,z,s
+  int isdynspin = sample->isdynspin;
+  if (isdynspin)
+      R.Resize(6);
   sample->updateEIDist();
   sample->updateEEDist();
 
@@ -361,6 +417,9 @@ void Molecular_system::separatedLocal(Sample_point * sample,Array1 <doublevar> &
     }
   }
   Array1 <doublevar> R2(5);
+  //CM
+  if (isdynspin)
+      R2.Resize(6);
   for(int i=0; i< nelectrons; i++) {
     for(int j=i+1; j<nelectrons; j++) {
       sample->getEEDist(i,j,R2);
@@ -369,6 +428,9 @@ void Molecular_system::separatedLocal(Sample_point * sample,Array1 <doublevar> &
   }
 
   Array1 <doublevar> pos(3);
+  //CM
+  if (isdynspin)
+      pos.Resize(4);
   for(int e=0; e< nelectrons; e++) {
     sample->getElectronPos(e,pos);
     for(int d=0; d< 3; d++) 
@@ -386,6 +448,12 @@ void Molecular_system::locDerivative(int ion, Sample_point * sample,
   der.Resize(3);
   der=0;
   Array1 <doublevar> R(5);
+  //CM
+  //is spin dynamic, passes r,r2,x,y,z,s
+  int isdynspin = sample->isdynspin;
+  if (isdynspin) 
+      R.Resize(6);
+  
   int ne=sample->electronSize();
   Array1 <doublevar> tmpder(3), tmpder_fit(3);
   for(int e=0; e< ne; e++) {
