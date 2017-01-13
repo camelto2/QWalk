@@ -1,4 +1,4 @@
-method { linear total_nstep 1000  } 
+method { test TEST_PARMS_DERS { }  } 
 
 include qw.sys
 

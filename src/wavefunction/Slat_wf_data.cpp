@@ -115,6 +115,10 @@ void Slat_wf_data::read(vector <string> & words, unsigned int & pos,
     }
   }
 
+  if(fabs(CSF(0)(0)) < 1e-10)
+    error("Cannot deal with the first CSF having zero weight.");
+      
+
   //no sorting when ndet=1;
   if( ndet==1 && sort)
     sort=0;
@@ -271,7 +275,6 @@ void Slat_wf_data::read(vector <string> & words, unsigned int & pos,
       }
     }
 
-    //cout << "done assignment " << endl;
 
     totoccupation(s).Resize(totocctemp.size());
     for(int i=0; i<totoccupation(s).GetDim(0); i++)
@@ -661,7 +664,6 @@ void Slat_wf_data::setVarParms(Array1 <doublevar> & parms)
   for(int i=0; i< max; i++) {
     wfObserver[i]->notify(all_wf_parms_change, 0);
   }
-  //cout <<"done setVarParms"<<endl;
 }
 //----------------------------------------------------------------------
 

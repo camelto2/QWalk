@@ -38,12 +38,12 @@ void Linear_optimization_method::read(vector <string> words,
   if(!readvalue(words,pos=0,minimum_psi0,"MINIMUM_PSI0"))
     minimum_psi0=0.95;
   if(!readvalue(words, pos=0, max_vmc_nstep, "MAX_VMC_NSTEP"))
-    max_vmc_nstep=8*vmc_nstep;
+    max_vmc_nstep=2*vmc_nstep;
   if(!readvalue(words, pos=0, max_nconfig_eval, "MAX_FIT_NCONFIG"))
-    max_nconfig_eval=8*nconfig_eval;
+    max_nconfig_eval=4*nconfig_eval;
   
   if(!readvalue(words, pos=0, max_nconfig_eval, "MAX_ZERO_ITERATIONS"))
-    max_zero_iterations=3;
+    max_zero_iterations=2;
 
   allocate(options.systemtext[0],  sys);
   sys->generatePseudo(options.pseudotext, pseudo);
@@ -160,44 +160,60 @@ void Linear_optimization_method::run(Program_options & options, ostream & output
 
 //return the proportion of the move that was Psi_0
 doublevar find_directions(Array2 <doublevar> & S, Array2 <doublevar> & Sinv, 
-    Array2 <doublevar> & H, 
+    Array2 <doublevar> & Hin, 
     Array1 <doublevar> & delta_alpha,doublevar stabilization,
     Array1 <bool> & linear) { 
   int n=S.GetDim(0);
   assert(S.GetDim(1)==n);
-  assert(H.GetDim(0)==n);
-  assert(H.GetDim(1)==n);
-
-  Sinv.Resize(n,n);
+  assert(Hin.GetDim(0)==n);
+  assert(Hin.GetDim(1)==n);
+  Array2 <doublevar> H=Hin;
+  //Sinv.Resize(n,n);
   for(int i=1; i< n; i++) H(i,i)+=stabilization;
-  InvertMatrix(S,Sinv,n);
+  //InvertMatrix(S,Sinv,n);
 
-  Array2 <doublevar> prodmatrix(n,n);
+  //Array2 <doublevar> prodmatrix(n,n);
 
-  MultiplyMatrices(Sinv,H,prodmatrix,n);
+  //MultiplyMatrices(Sinv,H,prodmatrix,n);
   Array1 <dcomplex> W(n);
   Array2 <doublevar> VL(n,n), VR(n,n);
-  GeneralizedEigenSystemSolverRealGeneralMatrices(prodmatrix,W,VL,VR);
+  //GeneralizedEigenSystemSolverRealGeneralMatrices(prodmatrix,W,VL,VR);
+  DGGEV(H,S,W,VL,VR);
   
   int min_index=0;
-  int min_eigenval=W(0).real();
-  
+  doublevar min_eigenval=W(0).real();
+  doublevar max_p0=0.0;
   for(int i=0; i< n; i++) { 
     single_write(cout,"eigenvalue ",i," ");
     single_write(cout,W(i),"\n");
-    if(W(i).real() < min_eigenval) { 
+    //if(W(i).real() < min_eigenval) { 
+    //  min_index=i;
+    //  min_eigenval=W(i).real();
+    //}
+    // Here we select the eigenvector with the highest percentage of the
+    // original wave function. It's possible this makes the algorithm go a little
+    // slower than necessary, but it should improve the stability, especially with 
+    // near-degenerate eigenvectors.
+    if(fabs(VR(i,0)) > max_p0) { 
       min_index=i;
+      max_p0=fabs(VR(i,0));
       min_eigenval=W(i).real();
     }
   }
 
   Array1 <doublevar> dp(n);
-  single_write(cout,"initial eigenvector ");
+  single_write(cout,"eigenvector ");
   for(int i=0; i < n; i++) { 
-    dp(i)=VL(min_index,i);
+    dp(i)=VR(min_index,i);
     single_write(cout,dp(i)," ");
   }
   single_write(cout,"\n");
+  single_write(cout,"eigenvalue ",min_eigenval,"\n");
+  
+  doublevar dpnorm=0.0;
+  for(int i=0; i< n; i++) dpnorm+=dp(i)*dp(i);
+  dpnorm=sqrt(dpnorm);
+  for(int i=0; i< n; i++) dp(i)/=dpnorm;
 
   doublevar dp0=dp(0);
   for(int i=1; i< n; i++) dp(i)/=dp(0);
@@ -213,6 +229,8 @@ doublevar find_directions(Array2 <doublevar> & S, Array2 <doublevar> & Sinv,
     }
   }
   D=sqrt(D);
+  norm=0.0;
+  
   for(int i=1; i< n;  i++) { 
     doublevar num_sum=0.0;
     doublevar denom_sum=0.0;
@@ -227,7 +245,7 @@ doublevar find_directions(Array2 <doublevar> & S, Array2 <doublevar> & Sinv,
         /(xi*D+(1-xi)*(1+denom_sum));
     else norm(i)=0.0;
   }
-
+  
 
 
 
@@ -239,13 +257,12 @@ doublevar find_directions(Array2 <doublevar> & S, Array2 <doublevar> & Sinv,
 
   delta_alpha.Resize(n-1);
   for(int i=0; i< n-1; i++) { 
-    if(!linear(i-1))
+    if(!linear(i))
       delta_alpha(i)=dp(i+1)/(1-renorm_dp);
     else delta_alpha(i)=dp(i+1);
   }
 
   
-  for(int i=1; i< n; i++) H(i,i)-=stabilization;
   return fabs(dp0);
   
 }
@@ -254,55 +271,104 @@ doublevar find_directions(Array2 <doublevar> & S, Array2 <doublevar> & Sinv,
 
 doublevar Linear_optimization_method::line_minimization(Array2 <doublevar> & S, 
     Array2 <doublevar> & Sinv, Array2 <doublevar> & H, Array1 <doublevar> & alpha) { 
-  vector<doublevar> stabilization;
-  stabilization.push_back(0.0);
-  stabilization.push_back(0.0);
-  stabilization.push_back(1.0);
-  stabilization.push_back(10.0);
-  int nstabil=stabilization.size();
   Array1 <bool> linear;
   wfdata->linearParms(linear);
-  Array1 <Array1 <doublevar> > alphas(nstabil);
-  alphas(0)=alpha;
- /* 
-  for(int i=1; i< nstabil; i++) { 
-    find_directions(S,Sinv,H,alphas(i),stabilization[i],linear);
-    //cout << "assigning alpha" << alphas(i).GetDim(0) << " " << alpha.GetDim(0) << endl;
-    for(int j=0; j< alpha.GetDim(0); j++) { 
-      alphas(i)(j)+=alpha(j);
-    }
+  Array1 <doublevar> alpha_tmp;
+  alpha_tmp=alpha;
+  doublevar stabilmax=3.0*fabs(H(0,0));
+  
+  doublevar psi_0_min=find_directions(S,Sinv,H,alpha_tmp,0.0,linear);
+  doublevar psi_0_max=find_directions(S,Sinv,H,alpha_tmp,stabilmax,linear);
+  psi_0_min=max(psi_0_min,minimum_psi0);
+  if(psi_0_min > psi_0_max) { 
+    error("In LINEAR, encountered psi_0_min > psi_0_max. Perhaps you should increase TOTAL_NSTEP?");
   }
-  */
-  Array1 <bool> fake_linear=linear;
-  fake_linear=true;
-  doublevar prop_psi0=find_directions(S,Sinv,H,alphas(1),0.0,fake_linear);
-  doublevar stabil=0.0001;
+  vector <doublevar> acc_stabils;
+
+  doublevar step=(psi_0_max-psi_0_min)/5;
+  doublevar tol=step/10;
+  //cout << "max " << psi_0_max << " min " << psi_0_min << endl;
+  for(doublevar psi0=psi_0_min+step; psi0 < psi_0_max; psi0+=step) { 
+    doublevar bracket_above=stabilmax;
+    doublevar bracket_below=0.0;
+    doublevar guesstab,guesspsi;
+    int count=0;
+    do { 
+      guesstab=(bracket_above-bracket_below)/2.0+bracket_below;
+      guesspsi=find_directions(S,Sinv,H,alpha_tmp,guesstab,linear);
+      if(guesspsi > psi0) bracket_above=guesstab;
+      else bracket_below=guesstab;
+      //cout << "psi0 " << psi0 << " guesstab " << guesstab << " guesspsi " << guesspsi 
+      //     << " brackets " << bracket_below << " " << bracket_above << endl;
+      if(++count > 100) error("In Linear_optimization::line_minimization: took more than 100 iterations to find sample. Something must be wrong.");
+    } while(fabs(guesspsi-psi0) > tol);
+    acc_stabils.push_back(guesstab);
+  }
+  //cout << "stabil max " << stabilmax << endl;
+  //for(doublevar stabil=0.0; stabil<stabilmax; stabil+=stabilmax/500) { 
+  //  prop_psi0=find_directions(S,Sinv,H,alpha_tmp,stabil,linear);
+  //  single_write(cout,"prop_psi0 ",prop_psi0);
+  //  single_write(cout," stabil ", stabil,"\n");
+  //  if(prop_psi0 > 0.5) { 
+  //    acc_stabils.push_back(stabil);
+  //  }
+  //  if(acc_stabils.size() > 10) break;
+  //}
+
+  /*
+
   while(prop_psi0 < minimum_psi0) { 
-    prop_psi0=find_directions(S,Sinv,H,alphas(1),stabil,fake_linear);
+    prop_psi0=find_directions(S,Sinv,H,alpha_tmp,stabil,linear);
     single_write(cout,"prop_psi0 ",prop_psi0);
     single_write(cout," stabil ", stabil,"\n");
-    stabil*=10.;
-
+    if(prop_psi0 > 0.5) { 
+      acc_stabils.push_back(stabil);
+    }
+    
+    stabil*=1.01;
+  }
+  */
+  
+  /*
+  int nstabil=50;
+  doublevar dstabil=stabil/nstabil;
+  for(int i=0; i< nstabil; i++) {
+    stabil=dstabil*i;
+    prop_psi0=find_directions(S,Sinv,H,alpha_tmp,stabil,linear);
+    cout << "finding stabil " << stabil << " psi0 " << prop_psi0 << endl;
+    if(prop_psi0 > 0.5) { 
+      acc_stabils.push_back(stabil);
+    }
+  }  */
+  int nstabil=acc_stabils.size()+1;
+  Array1 <Array1 <doublevar> > alphas(nstabil);
+  alphas(0)=alpha;
+  for(int i=1; i < nstabil; i+=1) { 
+    doublevar prop_psi0=find_directions(S,Sinv,H,alphas(i),acc_stabils[i-1],linear);  
+    cout << "i " << i << " " << acc_stabils[i-1] << " prop_psi0 " << prop_psi0 << endl;
+    
   }
 
-  for(int i=2; i < nstabil; i++) alphas(i)=alphas(1);
-  vector<doublevar> rescale;
-  rescale.push_back(0.0);
-  rescale.push_back(0.5);
-  rescale.push_back(1.0);
-  rescale.push_back(1.5);
   for(int i=1; i< nstabil; i++) { 
     for(int j=0; j< alpha.GetDim(0); j++) { 
-      if(!linear(j)) alphas(i)(j)*=rescale[i];
       alphas(i)(j)+=alpha(j);
     }
   }
-
+  
   Array2 <doublevar> energies_corr2(nstabil,2);
   bool significant_stabil=false;
   while(!significant_stabil) { 
 //    significant_stabil=true;
     correlated_evaluation(alphas,0,energies_corr2);
+    //for(int n=0; n< nstabil; n++) { 
+    //  cout << "alpha ";
+    //  for(int i=0; i< alpha.GetDim(0); i++) { 
+    //    cout << alphas(n)(i) << " ";
+    //  }
+      //cout << endl;
+      //cout << "energy " << energies_corr2(n,0) << " +/- " << energies_corr2(n,1) << endl;
+    //}
+
     for(int n=1; n< nstabil; n++) {
       doublevar diff=energies_corr2(n,0)-energies_corr2(0,0);
       if( fabs(diff)/energies_corr2(n,1) > 3.0) {
@@ -328,7 +394,7 @@ doublevar Linear_optimization_method::line_minimization(Array2 <doublevar> & S,
   doublevar min_en=energies_corr2(0,0);
   int min_alpha=0;
   for(int n=0; n< nstabil; n++) { 
-    single_write(cout,stabilization[n]," ",energies_corr2(n,0),"\n");
+//single_write(cout,stabilization[n]," ",energies_corr2(n,0),"\n");
     if(energies_corr2(n,0) < min_en
         && fabs(energies_corr2(n,0))/energies_corr2(n,1) > 2.0 ) { 
       min_en=energies_corr2(n,0);
@@ -537,13 +603,17 @@ void Linear_optimization_method::wavefunction_derivative(
       //S(i+1,j+1)=deriv_avg.vals(3*n+i*n+j);
     }
   }
-  for(int i=0; i< n; i++) { 
-    if(fabs(S(i+1,i+1)) < 1e-15) S(i+1,i+1)=1.0;
-  }
+//  for(int i=0; i< n+1; i++) { 
+//    cout <<"S-- ";
+//    for(int j=0; j< n+1; j++) { 
+//      cout << S(i,j) << " ";
+//    }
+//    cout << endl;
+//  }
   H(0,0)=en(0);
   for(int i=0; i < n; i++) { 
-    H(i+1,0)=deriv_avg.vals(i)-en(0)*deriv_avg.vals(n+i);
-    H(0,i+1)=H(i+1,0)+deriv_avg.vals(2*n+i);
+    H(i+1,0)=(deriv_avg.vals(i)-en(0)*deriv_avg.vals(n+i));
+    H(0,i+1)=(H(i+1,0)+deriv_avg.vals(2*n+i));
     //H(i+1,0)=deriv_avg.vals(i);
     //H(0,i+1)=deriv_avg.vals(2*n+i);
   }
