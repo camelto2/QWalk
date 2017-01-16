@@ -29,12 +29,18 @@ void extend_parm_deriv(Parm_deriv_return & ret1, const Parm_deriv_return & ret2)
   int nparms1=ret1.gradient.GetDim(0);
   int nparms2=ret2.gradient.GetDim(0);
   int nelectrons=ret1.val_gradient.GetDim(0);
+  //CM
+  //Can be 4-dimensional if dynamic spin
+  int dim = ret1.val_gradient.GetDim(1);
+  assert(dim == ret2.val_gradient.GetDim(1));
   Parm_deriv_return derivatives;
   
   
   if(nparms2==0) { 
     for(int e=0; e < nelectrons; e++) {
-      for(int d=0;d < 3; d++)  { 
+      //CM
+      //for(int d=0;d < 3; d++)  { 
+      for (int d=0; d< dim; d++) {
         ret1.val_gradient(e,d)+=ret2.val_gradient(e,d);
       }
     }
@@ -70,30 +76,43 @@ void extend_parm_deriv(Parm_deriv_return & ret1, const Parm_deriv_return & ret2)
   }
 
 
-  derivatives.val_gradient.Resize(nelectrons,3);
+  //CM
+  //derivatives.val_gradient.Resize(nelectrons,3);
+  derivatives.val_gradient.Resize(nelectrons,dim);
   for(int e=0; e< nelectrons; e++) { 
-    for(int d=0;d < 3; d++) {
+    //CM
+    //for(int d=0;d < 3; d++) {
+    for(int d = 0; d < dim; d++) {
       derivatives.val_gradient(e,d)=ret1.val_gradient(e,d)+ret2.val_gradient(e,d);
     }
   }
   
   //  Extending the derivative of the laplacian
-  derivatives.gradderiv.Resize(nparms,nelectrons,4);
+  //CM
+  //derivatives.gradderiv.Resize(nparms,nelectrons,4);
+  derivatives.gradderiv.Resize(nparms,nelectrons,dim+1); //dx,dy,dz,lap,ds if dim=4
 
   for(int p=0; p < nparms1; p++) { 
     for(int e=0; e< nelectrons; e++) { 
-      for(int d=0; d< 4; d++) { 
+      //CM
+      //for(int d=0; d< 4; d++) { 
+      for (int d = 0; d < dim+1; d++) {
         derivatives.gradderiv(p,e,d)=ret1.gradderiv(p,e,d);
       }
     }
   }
   for(int p=0; p < nparms2; p++) { 
     for(int e=0; e< nelectrons; e++) { 
-      for(int d=0; d< 4; d++) { 
+      //CM
+      //for(int d=0; d< 4; d++) { 
+      for(int d=0; d< dim+1; d++) { 
         derivatives.gradderiv(p+nparms1,e,d)=ret2.gradderiv(p,e,d);
       }
     }
   }
+  //CM
+  //At the moment, no spin laplacian, so no need to change the rest
+
   //Now do the cross-terms
   for(int p=0; p < nparms1; p++) { 
     for(int e=0; e< nelectrons; e++) { 
@@ -135,11 +154,17 @@ void Wavefunction::getForceBias(Wavefunction_data * wfdata, int e,
 {
   assert(bias.amp.GetDim(0) >=nfunc());
   assert(bias.amp.GetDim(1) >=4);
+  //CM
+  int dim = bias.amp.GetDim(1);
 
-  Wf_return bias_temp(nfunc(),5);
+  //CM
+  //Wf_return bias_temp(nfunc(),5);
+  Wf_return bias_temp(nfunc(),dim+1);
   getLap(wfdata, e, bias_temp);
   for(int f=0; f< nfunc(); f++)  {
-    for(int i=0; i< 4; i++) {
+    //CM
+    //for(int i=0; i< 4; i++) {
+    for(int i=0; i< dim; i++) {
       bias.amp(f,i)=bias_temp.amp(f,i);
       bias.phase(f,i)=bias_temp.phase(f,i);
     }
