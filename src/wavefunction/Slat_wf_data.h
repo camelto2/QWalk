@@ -78,10 +78,25 @@ public:
   }
 
 
+  //CM
+  //May not have 2 spin channels in case of dynspin calc
+  //utilize if ndim = 4, then dynamic spin
+  //
+  //virtual int valSize() {
+  //  if(optimize_mo) return 0;
+  //  if(optimize_det) return 2*detwt.GetDim(0);
+  //  else return nfunc*2;
+  //}
   virtual int valSize() {
-    if(optimize_mo) return 0;
-    if(optimize_det) return 2*detwt.GetDim(0);
-    else return nfunc*2;
+    if (optimize_mo) return 0;
+    if (optimize_det) {
+      if (ndim == 4) return detwt.GetDim(0); //has spin, i.e., only 1 det
+      else return 2*detwt.GetDim(0);
+    }
+    else {
+      if (ndim == 4) return nfunc;
+      else return 2*nfunc;
+    }
   }
 
   virtual void getVarParms(Array1 <doublevar> & parms);

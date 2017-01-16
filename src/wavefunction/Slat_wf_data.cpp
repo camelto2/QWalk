@@ -171,26 +171,56 @@ void Slat_wf_data::read(vector <string> & words, unsigned int & pos,
   }
 
   nfunc=statevec.size();
-  nelectrons.Resize(2);
+  //CM
+  //nelectrons.Resize(2);
 
-  nelectrons(0)=sys->nelectrons(0);
-  nelectrons(1)=sys->nelectrons(1);
+  //nelectrons(0)=sys->nelectrons(0);
+  //nelectrons(1)=sys->nelectrons(1);
+  int sd = sys->nelectrons(1);
+  if (sd == -1) 
+    nelectrons.Resize(1);
+  else
+    nelectrons.Resize(2);
+  for (int s = 0; s < nelectrons.GetDim(0); s++) nelectrons(s) = sys->nelectrons(s);
+
   pos=startpos;
   vector <string> nspinstr;
   if(readsection(words, pos, nspinstr, "NSPIN"))
   {
-    if(nspinstr.size() != 2)
-      error("NSPIN must have 2 elements");
-    nelectrons(0)=atoi(nspinstr[0].c_str());
-    nelectrons(1)=atoi(nspinstr[1].c_str());
-    if(nelectrons(0)+nelectrons(1) != sys->nelectrons(0)+sys->nelectrons(1)) {
-      error("NSPIN must specify the same number of electrons as the SYSTEM "
-          "in SLATER.");
+    //CM
+    //if(nspinstr.size() != 2)
+    //  error("NSPIN must have 2 elements");
+    //nelectrons(0)=atoi(nspinstr[0].c_str());
+    //nelectrons(1)=atoi(nspinstr[1].c_str());
+    //if(nelectrons(0)+nelectrons(1) != sys->nelectrons(0)+sys->nelectrons(1)) {
+    //  error("NSPIN must specify the same number of electrons as the SYSTEM "
+    //      "in SLATER.");
+    //}
+    int nspin = nspinstr.size();
+    if(nspin >= 3) error("NSPIN must be either 1 or 2 elements");
+    if (sd == -1 && nspin != 1) {
+	error("NSPIN must be of the same form as SYSTEM in SLATER.");
+    }
+    nelectrons.Resize(nspin);
+    int ss1 = 0;
+    int ss2 = 0;
+    for (int s = 0; s < nspin; s++) {
+      nelectrons(s) = atoi(nspinstr[s].c_str());
+      ss1 += nelectrons(s);
+    }
+    for (int s = 0; s < nspin; s++) ss2 += sys->nelectrons(s);
+    if (ss1 != ss2) {
+      error("NSPIN must specify the same number of electrons as the SYSTEM"
+            "in SLATER.");
     }
   }
 
   pos=startpos;
-  unsigned int canonstates=ndet*(nelectrons(0)+nelectrons(1));
+  //CM
+  //unsigned int canonstates=ndet*(nelectrons(0)+nelectrons(1));
+  int tote = 0;
+  for (int s = 0; s < nelectrons.GetDim(0); s++) tote += nelectrons(s);
+  unsigned int canonstates = ndet*tote;
   for(int i=0; i< nfunc; i++)
   {
     if( canonstates != statevec[i].size())
@@ -203,20 +233,34 @@ void Slat_wf_data::read(vector <string> & words, unsigned int & pos,
 
 
 
-
-  int tote=nelectrons(0)+nelectrons(1);
-  ndim=3;
+  //CM
+  //already defined above
+  //int tote=nelectrons(0)+nelectrons(1);
+  //CM
+  //If we have only 1 type of spin, i.e., nelectron.GetDim(0) == 1
+  //then we have a dynamic spin calculation
+  //ndim=3;
+  int ss = nelectrons.GetDim(0);
+  if (ss == 1)
+    ndim = 4;
+  else
+    ndim = 3;
 
 
   //Input parameters
-  occupation.Resize(nfunc, ndet, 2);
-  occupation_orig.Resize(nfunc, ndet, 2);
+  //CM
+  //occupation.Resize(nfunc, ndet, 2);
+  //occupation_orig.Resize(nfunc, ndet, 2);
+  occupation.Resize(nfunc, ndet, ss);
+  occupation_orig.Resize(nfunc, ndet, ss);
 
 
 
   for(int i=0; i< nfunc; i++) {
     for(int det=0; det < ndet; det++)  {
-      for(int s=0; s<2; s++) {
+      //CM
+      //for(int s=0; s<2; s++) {
+      for(int s=0; s<ss; s++) {
         //cout << det << " "  << s << endl;
         occupation(i,det,s).Resize(nelectrons(s));
         occupation_orig(i,det,s).Resize(nelectrons(s));
@@ -229,7 +273,9 @@ void Slat_wf_data::read(vector <string> & words, unsigned int & pos,
     int counter=0;
     for(int det=0; det<ndet; det++)  {
       //cout << "det=" << det << endl;
-      for(int s=0; s<2; s++) {
+      //CM
+      //for(int s=0; s<2; s++) {
+      for(int s=0; s<ss; s++) {
         //cout << "s=" << s << endl;
         //cout << "nelectrons " << nelectrons(s) << endl;
         for(int e=0; e<nelectrons(s); e++) {
@@ -244,8 +290,12 @@ void Slat_wf_data::read(vector <string> & words, unsigned int & pos,
 
 
   //Find what MO's are necessary for each spin
-  totoccupation.Resize(2);
-  for(int s=0; s<2; s++) {
+  //CM
+  //totoccupation.Resize(2);
+  totoccupation.Resize(ss);
+  //CM
+  //for(int s=0; s<2; s++) {
+  for (int s=0; s<ss; s++) {
     vector <int> totocctemp;
     for(int f=0; f< nfunc; f++)  {
       for(int det=0; det<ndet; det++) {
@@ -326,7 +376,10 @@ int Slat_wf_data::supports(wf_support_type support) {
 //----------------------------------------------------------------------
 
 void Slat_wf_data::init_mo() {
-  Array1 <int> nmospin(2);
+  //CM
+  //Array1 <int> nmospin(2);
+  int ss = nelectrons.GetDim(0);
+  Array1 <int> nmospin(ss);
   nmospin=0;
 
   for(int i=0; i< nfunc; i++)
@@ -336,7 +389,9 @@ void Slat_wf_data::init_mo() {
     for(int det=0; det<ndet; det++)
     {
       //cout << "det=" << det << endl;
-      for(int s=0; s<2; s++)
+      //CM
+      //for(int s=0; s<2; s++)
+      for(int s=0; s<ss; s++)
       {
         //cout << "s=" << s << endl;
         //cout << "nelectrons " << nelectrons(s) << endl;
@@ -354,9 +409,14 @@ void Slat_wf_data::init_mo() {
   if(nmospin(0) > nmo)
     error("First spin channel contains an orbital higher"
         " than requested NMO's.");
-  if(nmospin(1) > nmo)
+  //CM
+  //if(nmospin(1) > nmo)
+  //  error("Second spin channel contains an orbital higher"
+  //      " than requested NMO's.");
+  if (nmospin.GetDim(0) == 2 && nmospin(1) > nmo) {
     error("Second spin channel contains an orbital higher"
-        " than requested NMO's.");
+          " than requested NMO's.");
+  }
 
 
   genmolecorb->buildLists(totoccupation);
@@ -411,6 +471,8 @@ int Slat_wf_data::showinfo(ostream & os)
     os << "Clark, Morales, McMinis, Kim, and Scuseria. J. Chem. Phys. 135 244105 (2011)\n";
   }
 
+  //CM
+  int ss = nelectrons.GetDim(0);
   for(int f=0; f< nfunc; f++) {
     if(nfunc > 1)
       os << "For function " << f << endl;
@@ -420,7 +482,9 @@ int Slat_wf_data::showinfo(ostream & os)
         os << "Weight: " << detwt(det).val() << endl;
       }
       os << "State: \n";
-      for(int s=0; s<2; s++) {
+      //CM
+      //for(int s=0; s<2; s++) {
+      for(int s = 0; s < ss; s++){
         if(s==0) os << "spin up:\n";
         if(s==1) os << "spin down: \n";
         os << "  ";
@@ -518,7 +582,9 @@ int Slat_wf_data::writeinput(string & indent, ostream & os) {
     //preparing occupation_orig_print
     for(int f=0; f< nfunc; f++)
       for(int det=0; det < ndet; det++)
-        for(int s=0; s<2; s++){
+	//CM
+        //for(int s=0; s<2; s++){
+        for(int s=0; s<nelectrons.GetDim(0); s++){
           occupation_orig_print(f,det,s).Resize(nelectrons(s));
           occupation_orig_print(f,det,s)=occupation_orig(f,detlist(det),s);
         }
@@ -535,7 +601,9 @@ int Slat_wf_data::writeinput(string & indent, ostream & os) {
     }
     for(int f=0; f< nfunc; f++)
       for(int det=0; det < ndet; det++)
-        for(int s=0; s<2; s++){
+	//CM
+        //for(int s=0; s<2; s++){
+        for(int s=0; s<nelectrons.GetDim(0); s++){
           occupation_orig_print(f,det,s).Resize(nelectrons(s));
           occupation_orig_print(f,det,s)=occupation_orig(f,det,s);
         }
@@ -554,7 +622,9 @@ int Slat_wf_data::writeinput(string & indent, ostream & os) {
     for(int det=0; det < ndet; det++){
       if(ndet>1)
         os <<"#  Determinant "<<det+1<<": weight: "<<detwt_print(det)<<endl<< indent <<"  ";
-      for(int s=0; s<2; s++){
+      //CM
+      //for(int s=0; s<2; s++){
+      for(int s=0; s<nelectrons.GetDim(0); s++){
         for(int e=0; e< nelectrons(s); e++){
           os << occupation_orig_print(f,det,s)(e)+1 << " ";
           if((e+1)%20 ==0)

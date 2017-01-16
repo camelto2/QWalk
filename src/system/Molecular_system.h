@@ -62,7 +62,12 @@ public:
   
   virtual int nelectrons(int s) {
     assert(s==0 || s==1);
-    return nspin(s);
+    //CM
+    //If you ask for spin down, but a dynamic spin calculation where we only have nspin(0),
+    //then return -1. Used in wavefunction when accessing system in initialization
+    //return nspin(s);
+    if (nspin.GetDim(0) == 1 && s == 1)  return -1;
+    else return nspin(s);
   }
   virtual void getAtomicLabels(vector <string> & labels) {
     labels=atomLabels;
