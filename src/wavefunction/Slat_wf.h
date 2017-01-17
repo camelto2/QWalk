@@ -154,6 +154,8 @@ private:
   Array1 <int> spin;       //!< lookup table for the spin of a given electron
   Array1 <int> rede;       //!< number of the electron within its spin channel
   Array1 <int> opspin;
+  //CM
+  int isdynspin;
 
 
   Array2 <T> work1, work2; //!< Work matrices
@@ -195,23 +197,42 @@ inline void Slat_wf<T>::generateStorage(Wavefunction_storage * & wfstore)
   wfstore=new Slat_wf_storage<T>;
   Slat_wf_storage<T> * store;
   recast(wfstore, store);
-  store->moVal_temp.Resize (5,   nmo);
-  
-  // Added by Matous
-  store->moVal_temp_2.Resize (5,   nmo);
+  //CM
+  //store->moVal_temp.Resize (5,   nmo);
+  //
+  //// Added by Matous
+  //store->moVal_temp_2.Resize (5,   nmo);
 
-  store->detVal_temp.Resize(nfunc_, ndet, 2);
-  store->inverse_temp.Resize(nfunc_, ndet, 2);
-  for(int i=0; i< nfunc_; i++)
+  //store->detVal_temp.Resize(nfunc_, ndet, 2);
+  //store->inverse_temp.Resize(nfunc_, ndet, 2);
+  //for(int i=0; i< nfunc_; i++)
+  //{
+  //  for(int det=0; det < ndet; det++)
+  //  {
+  //    for(int s=0; s<2; s++)
+  //    {
+  //      store->inverse_temp(i,det,s).Resize(nelectrons(s), nelectrons(s));
+  //      store->inverse_temp(i,det,s)=0;
+  //      //store->detVal_temp(i,det,s)=1;
+  //    }
+  //  }
+  //}
+  int derivsize,spinsize;
+  if (isdynspin) { derivsize = 6; spinsize = 1; }
+  else { derivsize = 5; spinsize = 2; }
+  store->moVal_temp.Resize(derivsize,nmo);
+  store->moVal_temp_2.Resize(derivsize,nmo);
+  store->detVal_temp.Resize(nfunc_, ndet, spinsize);
+  store->inverse_temp.Resize(nfunc_, ndet, spinsize);
+  for (int i = 0; i < nfunc_; i++) 
   {
-    for(int det=0; det < ndet; det++)
+    for (int det = 0; det < ndet; det++)
     {
-      for(int s=0; s<2; s++)
-      {
-        store->inverse_temp(i,det,s).Resize(nelectrons(s), nelectrons(s));
-        store->inverse_temp(i,det,s)=0;
-        //store->detVal_temp(i,det,s)=1;
-      }
+	for (int s = 0; s < spinsize; s++)
+	{
+	    store->inverse_temp(i,det,s).Resize(nelectrons(s),nelectrons(s));
+	    store->inverse_temp(i,det,s) = 0;
+	}
     }
   }
 }
@@ -230,11 +251,19 @@ template <class T> inline void Slat_wf<T>::init(Wavefunction_data * wfdata,
   nfunc_=dataptr->nfunc;
   nmo=dataptr->nmo;
   ndet=dataptr->ndet;
-  nelectrons.Resize(2);
+  //CM
+  //nelectrons.Resize(2);
+  nelectrons.Resize(dataptr->nelectrons.GetDim(0));
   nelectrons=dataptr->nelectrons;
 
-  int tote=nelectrons(0)+nelectrons(1);
-  ndim=3;
+  //CM
+  //int tote=nelectrons(0)+nelectrons(1);
+  //ndim=3;
+  int tote = 0;
+  for (int s = 0; s < nelectrons.GetDim(0); s++) tote += nelectrons(s);
+  if (nelectrons.GetDim(0) == 1) { ndim = 4; isdynspin = 1; }
+  else { ndim = 3; isdynspin = 0; }
+
 
   spin.Resize(tote);
   rede.Resize(tote);
@@ -244,21 +273,37 @@ template <class T> inline void Slat_wf<T>::init(Wavefunction_data * wfdata,
     rede(e)=e;
     opspin(e)=1;
   }
-  for(int e=nelectrons(0); e< nelectrons(0)+nelectrons(1); e++) {
-    rede(e)=e-nelectrons(0);
-    spin(e)=1;
-    opspin(e)=0;
+  //CM
+  //for(int e=nelectrons(0); e< nelectrons(0)+nelectrons(1); e++) {
+  //  rede(e)=e-nelectrons(0);
+  //  spin(e)=1;
+  //  opspin(e)=0;
+  //}
+  if (!isdynspin) {
+    for(int e=nelectrons(0); e< nelectrons(0)+nelectrons(1); e++) {
+      rede(e)=e-nelectrons(0);
+      spin(e)=1;
+      opspin(e)=0;
+    }
   }
   //Properties and intermediate calculation storage.
-  moVal.Resize(5,   tote, nmo);
-  updatedMoVal.Resize(nmo,5);
-
-  detVal.Resize (nfunc_, ndet, 2);
-  inverse.Resize(nfunc_, ndet, 2);
+  //CM
+  //moVal.Resize(5,   tote, nmo);
+  //updatedMoVal.Resize(nmo,5);
+  moVal.Resize(ndim+2, tote, nmo);
+  updatedMoVal.Resize(nmo, ndim+2);
+  //CM
+  //detVal.Resize (nfunc_, ndet, 2);
+  //inverse.Resize(nfunc_, ndet, 2);
+  int ss = nelectrons.GetDim(0);
+  detVal.Resize (nfunc_, ndet, ss);
+  inverse.Resize(nfunc_, ndet, ss);
 
   for(int i=0; i< nfunc_; i++) {
     for(int det=0; det < ndet; det++) {
-      for(int s=0; s<2; s++) {
+      //CM
+      //for(int s=0; s<2; s++) {
+      for(int s=0; s<ss; s++) {
         inverse(i,det,s).Resize(nelectrons(s), nelectrons(s));
         inverse(i,det,s)=0;
         for(int e=0; e< nelectrons(s); e++) {
@@ -355,7 +400,9 @@ template<class T>inline void Slat_wf<T>::saveUpdate(Sample_point * sample, int e
   
   
   int norb=moVal.GetDim(2);
-  for(int d=0; d< 5; d++) {
+  //CM
+  //for(int d=0; d< 5; d++) {
+  for (int d=0; d< ndim+2; d++) {
     for(int i=0; i< norb; i++) {
       store->moVal_temp(d,i)=moVal(d,e,i);
     }
@@ -374,7 +421,9 @@ template<class T>inline void Slat_wf<T>::restoreUpdate(Sample_point * sample, in
   int s=spin(e);
   inverseStale=0;
   
-  for(int j=0; j<5; j++) {
+  //CM
+  //for(int j=0; j<5; j++) {
+  for(int j=0; j< ndim+2; j++) {
     for(int i=0; i<moVal.GetDim(2); i++) {
       moVal(j,e,i)=store->moVal_temp(j,i);
     }
@@ -434,8 +483,9 @@ template <class T>inline void Slat_wf<T>::saveUpdate(Sample_point * sample, int 
     }
   }
   
-  
-  for(int d=0; d< 5; d++) {
+  //CM
+  //for(int d=0; d< 5; d++) {
+  for(int d=0; d< ndim+2; d++) {
     for(int i=0; i< moVal.GetDim(2); i++) {
       store->moVal_temp(d,i)=moVal(d,e1,i);
       store->moVal_temp_2(d,i)=moVal(d,e2,i);
@@ -457,8 +507,9 @@ template<class T> inline void Slat_wf<T>::restoreUpdate(Sample_point * sample, i
   
   int s1=spin(e1), s2=spin(e2);
   inverseStale=0;
-  
-  for(int j=0; j<5; j++) {
+  //CM
+  //for(int j=0; j<5; j++) {
+  for(int j=0; j<ndim+2; j++) {
     for(int i=0; i<moVal.GetDim(2); i++) {
       moVal(j,e1,i)=store->moVal_temp(j,i);
       moVal(j,e2,i)=store->moVal_temp_2(j,i);
@@ -527,7 +578,11 @@ template <class T> inline void Slat_wf<T>::updateLap( Wavefunction_data * wfdata
     electronIsStaleVal=0;
   }
   else {
-    for(int e=0; e< nelectrons(0)+nelectrons(1); e++) {
+    //CM
+    //for(int e=0; e< nelectrons(0)+nelectrons(1); e++) {
+    int tote = 0;
+    for (int s = 0; s < nelectrons.GetDim(0); s++) tote += nelectrons(s);
+    for (int e = 0; e < tote; e++) {
       if(electronIsStaleLap(e)) {
         updateLap(parent, sample, e);
         electronIsStaleLap(e)=0;
@@ -552,6 +607,10 @@ template <> inline int Slat_wf<dcomplex>::getParmDeriv(Wavefunction_data *  wfda
   return 0;
 }
 
+//CM
+//At the moment, if we have a real wavefunction, we will not have dynamic spins.
+//Only will happen with dcomplex wavefunction if at all.
+//So this should be ok to leave alone.
 template <> inline int Slat_wf<doublevar>::getParmDeriv(Wavefunction_data *  wfdata, 
 			  Sample_point * sample ,
 			  Parm_deriv_return & derivatives){
@@ -682,7 +741,11 @@ inline doublevar real_qw(doublevar & a) { return a; }
 inline doublevar real_qw(dcomplex & a) { return real(a); } 
 
 template <class T>inline void Slat_wf<T>::updateInverse(Slat_wf_data * dataptr, int e) { 
-  int maxmatsize=max(nelectrons(0),nelectrons(1));
+  //CM
+  //int maxmatsize=max(nelectrons(0),nelectrons(1));
+  int maxmatsize;
+  if (isdynspin) maxmatsize = nelectrons(0);
+  else maxmatsize = max(nelectrons(0),nelectrons(1));
   Array1 <T> modet(maxmatsize);
   int s=spin(e);
   int ndet_update=ndet;
@@ -753,7 +816,11 @@ template <class T>inline void Slat_wf<T>::updateInverse(Slat_wf_data * dataptr, 
 //------------------------------------------------------------------------
 
 template <class T> inline int Slat_wf<T>::updateValNoInverse(Slat_wf_data * dataptr, int e) { 
-  int maxmatsize=max(nelectrons(0),nelectrons(1));
+  //CM
+  //int maxmatsize=max(nelectrons(0),nelectrons(1));
+  int maxmatsize;
+  if (isdynspin) maxmatsize = nelectrons(0);
+  else maxmatsize = max(nelectrons(0),nelectrons(1));
   Array1 <T> modet(maxmatsize);
   int s=spin(e);
   for(int f=0; f< nfunc_; f++)  {
@@ -862,15 +929,41 @@ template <class T>inline void Slat_wf<T>::getVal(Wavefunction_data * wfdata, int
   int s=spin(e);
   int opp=opspin(e);
   
-  for(int f=0; f< nfunc_; f++) {
-    Array1 <log_value<T> > detvals(ndet);
-    for(int det=0; det < ndet; det++) {
-      detvals(det) = dataptr->detwt(det)*detVal(f,det,s)*detVal(f,det,opp);
+  //CM
+  //for(int f=0; f< nfunc_; f++) {
+  //  Array1 <log_value<T> > detvals(ndet);
+  //  for(int det=0; det < ndet; det++) {
+  //    detvals(det) = dataptr->detwt(det)*detVal(f,det,s)*detVal(f,det,opp);
+  //  }
+  //  log_value<T> totval=sum(detvals);
+  //  //vals(f,0)=totval.logval;
+  //  //si(f)=totval.sign;
+  //  vals(f,0)=totval;
+  //}
+  //Ony one determinant for dynspin
+  //By doing this check, it keeps us from carrying around detVal(f,det,opp) which
+  //would all be held constant at 1
+  if (isdynspin) {
+    for(int f = 0; f < nfunc_; f++) {
+	Array1<log_value<T> > detvals(ndet);
+	for (int det = 0; det < ndet; det++) {
+          detvals(det) = dataptr->detwt(det)*detVal(f,det,s);
+	}
+	log_value<T> totval=sum(detvals);
+	vals(f,0)=totval;
     }
-    log_value<T> totval=sum(detvals);
-    //vals(f,0)=totval.logval;
-    //si(f)=totval.sign;
-    vals(f,0)=totval;
+  }
+  else {
+    for(int f=0; f< nfunc_; f++) {
+      Array1 <log_value<T> > detvals(ndet);
+      for(int det=0; det < ndet; det++) {
+        detvals(det) = dataptr->detwt(det)*detVal(f,det,s)*detVal(f,det,opp);
+      }
+      log_value<T> totval=sum(detvals);
+      //vals(f,0)=totval.logval;
+      //si(f)=totval.sign;
+      vals(f,0)=totval;
+    }
   }
 
   val.setVals(vals);
@@ -893,7 +986,15 @@ template <class T> inline void Slat_wf<T>::calcLap(Slat_wf_data * dataptr, Sampl
 {
   //cout << "calcLap " << endl;
   inverseStale=0;
-  for(int e=0; e< nelectrons(0)+nelectrons(1); e++)  {
+  //CM
+  int tote = 0;
+  int ss;
+  if (isdynspin) ss = 1;
+  else ss = 2;
+  for (int s = 0; s < ss; s++) tote+=nelectrons(s);
+  //CM
+  //for(int e=0; e< nelectrons(0)+nelectrons(1); e++)  {
+  for(int e =0; e < tote; e++) {
     int s=spin(e);
     sample->updateEIDist();
 
@@ -903,14 +1004,20 @@ template <class T> inline void Slat_wf<T>::calcLap(Slat_wf_data * dataptr, Sampl
     molecorb->updateLap(sample, e, s,
                                 updatedMoVal);
     //cout << "done " << endl;
-    for(int d=0; d< 5; d++)  {
+    //CM
+    //for(int d=0; d< 5; d++)  {
+    for(int d=0; d< ndim+2; d++)  {
       for(int i=0; i< updatedMoVal.GetDim(0); i++) {
         moVal(d,e,i)=updatedMoVal(i,d);
       }
     }
   }
 
-  int maxmatsize=max(nelectrons(0),nelectrons(1));
+  //CM
+  //int maxmatsize=max(nelectrons(0),nelectrons(1));
+  int maxmatsize;
+  if (isdynspin) maxmatsize = nelectrons(0);
+  else maxmatsize = max(nelectrons(0),nelectrons(1));
   Array2 <T> modet(maxmatsize, maxmatsize);
   //ofstream matout("matrix_out", ios::app);
   //matout.precision(15);
@@ -918,7 +1025,9 @@ template <class T> inline void Slat_wf<T>::calcLap(Slat_wf_data * dataptr, Sampl
   //cout << "here " << endl;
   for(int f=0; f< nfunc_; f++)   {
     for(int det=0; det < ndet; det++ ) {
-      for(int s=0; s< 2; s++ ) {
+      //CM
+      //for(int s=0; s< 2; s++ ) {
+      for(int s=0; s< ss; s++ ) {
 
 
         for(int e=0; e< nelectrons(s); e++) {
@@ -953,7 +1062,9 @@ template <class T> inline void Slat_wf<T>::calcLap(Slat_wf_data * dataptr, Sampl
 
 
 template <class T> void Slat_wf<T>::getDetLap(int e, Array3<log_value <T> > &  vals ) { 
-  vals.Resize(nfunc_,ndet,5);
+  //CM
+  //vals.Resize(nfunc_,ndet,5);
+  vals.Resize(nfunc_,ndet,ndim+2);
   int s=spin(e);
   int opp=opspin(e);
 
@@ -976,14 +1087,30 @@ template <class T> void Slat_wf<T>::getDetLap(int e, Array3<log_value <T> > &  v
 
   for(int f=0; f< nfunc_; f++) {
     Array1 <log_value <T> > detvals(ndet);
-    for(int det=0; det < ndet; det++) {
-      detvals(det) = detVal(f,det,s)*detVal(f,det,opp);
+    //CM
+    //for(int det=0; det < ndet; det++) {
+    //  detvals(det) = detVal(f,det,s)*detVal(f,det,opp);
 
-      vals(f,det,0)=detvals(det);
+    //  vals(f,det,0)=detvals(det);
+    //}
+    if (isdynspin) {
+      for(int det=0; det < ndet; det++) {
+        detvals(det) = detVal(f,det,s);
+        vals(f,det,0)=detvals(det);
+      }
+    }
+    else {
+      for(int det=0; det < ndet; det++) {
+        detvals(det) = detVal(f,det,s)*detVal(f,det,opp);
+
+        vals(f,det,0)=detvals(det);
+      }
     }
     
     Array1 <log_value <T> > detgrads(ndet);
-    for(int i=1; i< 5; i++) {
+    //CM
+    //for(int i=1; i< 5; i++) {
+    for(int i=1; i< ndim+2; i++) {
       if(!parent->use_clark_updates) {   //Sherman-Morrison updates
         for(int det=0; det < ndet; det++) {
           T temp=0;
@@ -1016,8 +1143,14 @@ template <class T> void Slat_wf<T>::getDetLap(int e, Array3<log_value <T> > &  v
           detgrads(d)=ratios(d)*detgrads(0);
         }
       } //------Done clark updates
-      for(int d=0; d< ndet; d++) {
-        detgrads(d)*=detVal(f,d,opp);
+      //CM
+      //for(int d=0; d< ndet; d++) {
+      //  detgrads(d)*=detVal(f,d,opp);
+      //}
+      if (!isdynspin) {
+        for(int d=0; d< ndet; d++) {
+          detgrads(d)*=detVal(f,d,opp);
+        }
       }
 
       //--------------------------------
@@ -1038,13 +1171,17 @@ template <class T> void Slat_wf<T>::getLap(Wavefunction_data * wfdata,
 
   //Array1 <doublevar> si(nfunc_, 0.0);
   //Array2 <doublevar> vals(nfunc_,5,0.0);
-  Array2 <log_value <T> > vals(nfunc_,5);
+  //CM
+  //Array2 <log_value <T> > vals(nfunc_,5);
+  Array2 <log_value <T> > vals(nfunc_,ndim+2);
   
   Array3 <log_value<T> > detvals;
   getDetLap(e,detvals);
   Array1 <log_value<T> > tempsum(ndet);
   for(int f=0; f< nfunc_; f++) {
-    for(int i=0; i< 5; i++) {
+    //CM
+    //for(int i=0; i< 5; i++) {
+    for(int i=0; i < ndim+2; i++) {
       for(int d=0;d < ndet; d++) {
         tempsum(d)=parent->detwt(d)*detvals(f,d,i);
       }
@@ -1052,7 +1189,9 @@ template <class T> void Slat_wf<T>::getLap(Wavefunction_data * wfdata,
     }
     log_value<T> inv=vals(f,0);
     inv.logval*=-1;
-    for(int i=1; i< 5; i++) vals(f,i)*=inv;
+    //CM
+    //for(int i=1; i< 5; i++) vals(f,i)*=inv;
+    for(int i=1; i< ndim+2; i++) vals(f,i)*=inv;
   }
   
   
@@ -1085,8 +1224,9 @@ template <class T> inline void Slat_wf<T>::updateLap(Slat_wf_data * dataptr,
 
   //update all the mo's that we will be using.
   molecorb->updateLap(sample,e,s,updatedMoVal);
-
-  for(int d=0; d< 5; d++)
+  //CM
+  //for(int d=0; d< 5; d++)
+  for(int d=0; d< ndim+2; d++)
     for(int i=0; i< updatedMoVal.GetDim(0); i++)
       moVal(d,e,i)=updatedMoVal(i,d);
   
@@ -1104,7 +1244,11 @@ template <class T> inline void Slat_wf<T>::evalTestPos(Array1 <doublevar> & pos,
     updateInverse(parent, lastValUpdate);
   }
 
-  int nspin=2;
+  //CM
+  //int nspin=2;
+  int nspin;
+  if (isdynspin) nspin = 1;
+  else nspin = 2;
   Array1<Array2 <T> > movals(nspin);
   Array1 <doublevar> oldpos(ndim);
   Array1 <T> modet(nmo);
@@ -1139,7 +1283,10 @@ template <class T> inline void Slat_wf<T>::evalTestPos(Array1 <doublevar> & pos,
             nelectrons(s));
         new_detVals(det)=parent->detwt(det)*detVal(f,det,s);
         new_detVals(det)*=ratio;
-        new_detVals(det)*=detVal(f,det,opps);
+	//CM
+        //new_detVals(det)*=detVal(f,det,opps);
+	if (!isdynspin)
+          new_detVals(det)*=detVal(f,det,opps);
       }
     }
     else { //Clark updates 
@@ -1164,7 +1311,10 @@ template <class T> inline void Slat_wf<T>::evalTestPos(Array1 <doublevar> & pos,
       for(int d=0; d< ndet; d++) {
         new_detVals(d)=parent->detwt(d)*detVal(f,0,s);
         new_detVals(d)*=baseratio*ratios(d);
-        new_detVals(d)*=detVal(f,d,opps);
+	//CM
+        //new_detVals(d)*=detVal(f,d,opps);
+	if(!isdynspin)
+          new_detVals(d)*=detVal(f,d,opps);
       }
       
     }
