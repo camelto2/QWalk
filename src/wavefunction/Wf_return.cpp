@@ -57,7 +57,8 @@ void Wf_return::write(string & indent, ostream & os) {
 
 
 
-
+//CM 
+//right now, dynamic spin only used for slater-jastrow wavefunctions, which use log_values
 void Wf_return::setVals(Array2 <dcomplex> & vals ,
                         Array1 <doublevar> &  p) {
   
@@ -93,6 +94,8 @@ void Wf_return::setVals(Array2 <dcomplex> & vals ,
 
 //------------------------------------------------------------------------
 
+//CM 
+//right now, dynamic spin only used for slater-jastrow wavefunctions, which use log_values
 void Wf_return::setVals(Array2 <doublevar> & vals, Array1 <doublevar> & sign) {
   is_complex=0;
   for(int w=0; w< vals.GetDim(0); w++) {
@@ -110,6 +113,11 @@ void Wf_return::setVals(Array2 <doublevar> & vals, Array1 <doublevar> & sign) {
   
 }
 //----------------------------------------------------------------------
+
+//CM 
+//These look correct for the derivitive purposes. if nst == 5, then it is a
+//dynamic spin calculation, but since that only keeps track of ds, it is only a 
+//first derivitive and we do not need to do anything
 
 void Wf_return::setVals(Array2 <log_value<doublevar> > & v ) {
   is_complex=0;
