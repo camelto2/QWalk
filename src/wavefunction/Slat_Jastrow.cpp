@@ -184,8 +184,12 @@ int Slat_Jastrow::getParmDeriv(Wavefunction_data *  wfdata,
   int nslater=dataptr->slater->nparms();
   int njast=dataptr->jastrow->nparms();
   int nparms=nslater + njast;
-  
-  derivatives.val_gradient.Resize(sample->electronSize(),5);
+ 
+  //CM 
+  //derivatives.val_gradient.Resize(sample->electronSize(),5);
+  int dim = 5;
+  if (sample->isdynspin) dim = 6;
+  derivatives.val_gradient.Resize(sample->electronSize(),dim);
   slater_wf->getParmDeriv(dataptr->slater,sample, derivatives);
   jastrow_wf->getParmDeriv(dataptr->jastrow,sample, jastval);
   extend_parm_deriv(derivatives,jastval);
@@ -198,7 +202,10 @@ void Slat_Jastrow::getForceBias(Wavefunction_data * wfdata, int e,
                                 Wf_return & bias)
 {
 
-
+  //CM 
+  //I do not think getForceBias is every really utilized. I suppose
+  //it is only for WFs where we can only approximate dx,dy,dz
+  //so I do not think it is really necessary to update at the moment. 
   assert(bias.amp.GetDim(0) >= nfunc_);
   assert(bias.amp.GetDim(1) >= 4);
   Slat_Jastrow_data * dataptr;
@@ -316,13 +323,18 @@ void Slat_Jastrow::getLap(Wavefunction_data * wfdata, int e,
                           Wf_return & lap)
 {
   //cout << "getLap\n";
-  assert(lap.amp.GetDim(0) >= nfunc_);
   assert(lap.amp.GetDim(1) >= 5);
+  //CM
+  int dim = 5;
+  if (lap.amp.GetDim(1) == 6) dim = 6;
   Slat_Jastrow_data * dataptr;
   recast(wfdata, dataptr);
   assert(dataptr != NULL);
 
-  Wf_return slat_lap(nfunc_,5);
+  //CM
+  //Jastrow is spin-variable independent, so it will only be 5 dimensional.
+  //Wf_return slat_lap(nfunc_,5);
+  Wf_return slat_lap(nfunc_,dim);
   Wf_return jast_lap(nfunc_,5);
 
   slater_wf->getLap(dataptr->slater, e, slat_lap);
@@ -354,7 +366,12 @@ void Slat_Jastrow::getLap(Wavefunction_data * wfdata, int e,
 
     lap.cvals(i,4)=slat_lap.cvals(i,4)+jast_lap.cvals(i,4)
       +2.0*dot;
-
+    //CM
+    if (dim == 6) {
+	lap.amp(i,5) = slat_lap.amp(i,5);
+	lap.phase(i,5) = slat_lap.phase(i,5);
+	lap.cvals(i,5) = slat_lap.cvals(i,5);
+    }
   }
 }
 
