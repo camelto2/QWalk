@@ -114,6 +114,10 @@ private:
   int nelectrons;
 
   int ndim;
+  //CM
+  doublevar spintimestep;
+  int isdynspin;
+
   int print_wf_vals; //!< whether or not to put the values of the wavefunction to cout
   int low_io; //!< Only output the configurations and any Density objects at the end of the run, not every block
   string config_trace; //!< where to lay down a trace of configurations

@@ -35,8 +35,8 @@ void Vmc_method::read(vector <string> words,
 {
 
   have_read_options=1;
-
-  ndim=3;
+  //CM
+  //ndim=3;
 
   if(!readvalue(words, pos=0, nblock, "NBLOCK"))
     nblock=100;
@@ -51,6 +51,11 @@ void Vmc_method::read(vector <string> words,
   else auto_timestep=false;
 
   //optional options
+  
+  //CM
+  if(!readvalue(words, pos=0, spintimestep, "SPINTIMESTEP")) {
+      spintimestep = 1.0E-08*timestep;
+  }
 
   if(!readvalue(words, pos=0, ndecorr, "NDECORR"))
     ndecorr=2;
@@ -174,6 +179,10 @@ int Vmc_method::allocateIntermediateVariables(System * locsys,
     allocate(avg_words[i], locsys, locwfdata, average_var(i));
   }
   
+  //CM
+  if (sample->isdynspin) isdynspin = 1;
+  else isdynspin = 0;
+  ndim = sample->ndim();
   
   return 1;
 }
@@ -344,8 +353,10 @@ void Vmc_method::runWithVariables(Properties_manager & prop,
                                   Pseudopotential * psp,
                                   ostream & output)
 {
-
-  nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
+  //CM
+  //nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
+  if (sys->nelectrons(1) == -1) nelectrons=sys->nelectrons(0);
+  else nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
 
   
   allocateIntermediateVariables(sys, wfdata);
@@ -393,18 +404,27 @@ void Vmc_method::runWithVariables(Properties_manager & prop,
 
         //------------------------------------------
         
-        Array1 <doublevar> oldpos(3);
-        Array1 <doublevar> newpos(3);
+	//CM
+        //Array1 <doublevar> oldpos(3);
+        //Array1 <doublevar> newpos(3);
+	Array1 <doublevar> oldpos(ndim);
+	Array1 <doublevar> newpos(ndim);
         for(int decorr=0; decorr< ndecorr; decorr++) {
 
             for(int e=0; e<nelectrons; e++) {
               sample->getElectronPos(e,oldpos);
               
-              int acc=sampler->sample(e,sample, wf, 
-                                 wfdata, guidewf,dinfo, timestep);
+	      //CM
+              //int acc=sampler->sample(e,sample, wf, 
+              //                   wfdata, guidewf,dinfo, timestep);
+	      int acc;
+	      if (isdynspin) acc=sampler->sample(e,sample,wf,wfdata,guidewf,dinfo,timestep,spintimestep);
+	      else acc=sampler->sample(e,sample,wf,wfdata,guidewf,dinfo,timestep);
+
               sample->getElectronPos(e,newpos);
-              
-              for(int d=0; d< 3; d++) {
+              //CM
+              //for(int d=0; d< 3; d++) {
+	      for (int d = 0; d < ndim; d++) {
                 diffusion_rate(block)+=(newpos(d)-oldpos(d))                  
                   *(newpos(d)-oldpos(d));
               }
@@ -413,8 +433,12 @@ void Vmc_method::runWithVariables(Properties_manager & prop,
                 wf->getVal(wfdata,0,wfval);
                 cout << "step " << e << " amp " << wfval.amp(0,0) 
                   << " phase " << cos(wfval.phase(0,0)) << endl;
-                cout << "pos " << newpos(0) << " " << newpos(1) << " " 
-                  << newpos(2) << endl;
+		//CM
+                //cout << "pos " << newpos(0) << " " << newpos(1) << " " 
+                // << newpos(2) << endl;
+		cout << "pos ";
+		for (int d=0; d< ndim; d++) cout << newpos(d) << " ";
+		cout << endl;
               }
               
               if(acc>0) {
@@ -462,7 +486,9 @@ void Vmc_method::runWithVariables(Properties_manager & prop,
           dumpout << pt.wf_val.sign(0) << " " << pt.wf_val.amp(0,0) << " ";
           for(int e=0; e< nelectrons; e++)  { 
             sample->getElectronPos(e,newpos);
-            for(int d=0; d< 3; d++) dumpout << newpos(d) << " ";
+	    //CM
+            //for(int d=0; d< 3; d++) dumpout << newpos(d) << " ";
+            for(int d=0; d< ndim; d++) dumpout << newpos(d) << " ";
           }
           dumpout << endl;
             
