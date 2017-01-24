@@ -34,7 +34,8 @@ void Dmc_method::read(vector <string> words,
                       unsigned int & pos,
                       Program_options & options)
 {
-  ndim=3;
+  //CM
+  //ndim=3;
 
   have_read_options=1;
 
@@ -45,6 +46,10 @@ void Dmc_method::read(vector <string> words,
     error("Need TIMESTEP in METHOD section");
 
   //optional options
+
+  //CM
+  if(!readvalue(words, pos=0, nblock, "SPINTIMESTEP"))
+      spintimestep = timestep;
 
   if(!readvalue(words, pos=0, nblock, "NBLOCK"))
     nblock=100;
@@ -192,7 +197,10 @@ int Dmc_method::allocateIntermediateVariables(System * sys,
   wf=NULL;
   if(sample) delete sample;
   sample=NULL;
-  nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
+  //CM
+  //nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
+  if (sys->nelectrons(1) == -1) nelectrons=sys->nelectrons(0);
+  else nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
   wfdata->generateWavefunction(wf);
   sys->generateSample(sample);
   sample->attachObserver(wf);
@@ -214,7 +222,11 @@ int Dmc_method::allocateIntermediateVariables(System * sys,
   for(int i=0; i< average_var.GetDim(0); i++) { 
     allocate(avg_words[i], sys, wfdata, average_var(i));
   }
-  
+
+  //CM
+  if (sample->isdynspin) isdynspin = 1;
+  else isdynspin = 0;
+  ndim = sample->ndim();
 
   return 1;
 }
@@ -377,7 +389,9 @@ void Dmc_method::runWithVariables(Properties_manager & prop,
       Dynamics_info dinfo;
       doublevar acsum=0;
       doublevar deltar2=0;
-      Array1 <doublevar> epos(3);
+      //CM
+      //Array1 <doublevar> epos(3);
+      Array1 <doublevar> epos(ndim);
       
       doublevar avg_acceptance=0;
       
@@ -390,8 +404,11 @@ void Dmc_method::runWithVariables(Properties_manager & prop,
           
           for(int e=0; e< nelectrons; e++) {
             int acc;
-            acc=dyngen->sample(e, sample, wf, wfdata, guidingwf,
-                               dinfo, timestep);
+	    //CM
+            //acc=dyngen->sample(e, sample, wf, wfdata, guidingwf,
+            //                  dinfo, timestep);
+	    if (isdynspin) acc=dyngen->sample(e,sample,wf,wfdata,guidingwf,dinfo,timestep,spintimestep);
+	    else acc=dyngen->sample(e,sample,wf,wfdata,guidingwf,dinfo,timestep);
             
             if(dinfo.accepted) 
               deltar2+=dinfo.diffusion_rate/(nconfig*nelectrons*npsteps);
@@ -656,7 +673,12 @@ void Dmc_method::restorecheckpoint(string & filename, System * sys,
     mygather.gatherData(pts(walker).prop, pseudo, sys,
                         wfdata, wf, sample,
                         guidingwf);
-    pts(walker).age.Resize(sys->nelectrons(0)+sys->nelectrons(1));
+    //CM
+    //pts(walker).age.Resize(sys->nelectrons(0)+sys->nelectrons(1));
+    int ne;
+    if (sys->nelectrons(1) == -1) ne = sys->nelectrons(0);
+    else ne = sys->nelectrons(0)+sys->nelectrons(1);
+    pts(walker).age.Resize(ne);
     pts(walker).age=0;
   }
   find_cutoffs();

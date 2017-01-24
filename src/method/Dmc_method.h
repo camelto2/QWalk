@@ -175,6 +175,9 @@ public:
   doublevar eref; //!< reference energy-best guess at dmc energy
   doublevar etrial; //!< current trial energy
   doublevar timestep;
+  //CM
+  doublevar spintimestep;
+  int isdynspin;
   string readconfig, storeconfig;
   string log_label;
   int nconfig;
