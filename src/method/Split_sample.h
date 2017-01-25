@@ -80,6 +80,16 @@ class Dynamics_generator {
                      Dynamics_info & info,
                      doublevar & efftimestep
                      )=0;
+  //CM
+  virtual int sample(int e,
+                     Sample_point * sample, 
+                     Wavefunction * wf, 
+                     Wavefunction_data * wfdata, 
+                     Guiding_function * guidewf,
+                     Dynamics_info & info,
+                     doublevar & efftimestep,
+		     doublevar & spintimestep
+                     )=0;
 
 
   //returns the acceptance ratio                                  
@@ -87,6 +97,13 @@ class Dynamics_generator {
                      Wavefunction_data * wfdata, Guiding_function * guidewf,
                              int e,
                              Array1 <doublevar> & newpos, doublevar timestep,
+                             Dynamics_info & info, Dynamics_info & oldinfo);
+  //CM
+  virtual doublevar greenFunction(Sample_point * sample, Wavefunction * wf,
+                     Wavefunction_data * wfdata, Guiding_function * guidewf,
+                             int e,
+                             Array1 <doublevar> & newpos, doublevar timestep,
+			     doublevar spintimestep,
                              Dynamics_info & info, Dynamics_info & oldinfo);
 
   virtual void enforceNodes(int i) {
@@ -168,6 +185,16 @@ class Split_sampler:public Dynamics_generator {
              Dynamics_info & info,
              doublevar & efftimestep
              );
+  //CM
+  int sample(int e,
+             Sample_point * sample, 
+             Wavefunction * wf, 
+             Wavefunction_data * wfdata, 
+             Guiding_function * guidewf,
+             Dynamics_info & info,
+             doublevar & efftimestep,
+	     doublevar & spintimestep
+             );
   int split_driver(int e,
                    Sample_point * sample,
                    Wavefunction * wf, 
@@ -176,6 +203,16 @@ class Split_sampler:public Dynamics_generator {
                    int depth,
                    Dynamics_info & info,
                    doublevar & efftimestep);
+  //CM
+  int split_driver(int e,
+                   Sample_point * sample,
+                   Wavefunction * wf, 
+                   Wavefunction_data * wfdata,
+                   Guiding_function * guidewf,
+                   int depth,
+                   Dynamics_info & info,
+                   doublevar & efftimestep,
+		   doublevar & spintimestep);
 
   //virtual doublevar greenFunction(Sample_point * sample, Wavefunction * wf,
   //                   Wavefunction_data * wfdata, Guiding_function * guidewf,
@@ -192,10 +229,19 @@ class Split_sampler:public Dynamics_generator {
   doublevar transition_prob(int point1, int point2,
                             doublevar timestep, 
                             drift_type dtype);
+  //CM
+  doublevar transition_prob(int point1, int point2,
+                            doublevar timestep, 
+			    doublevar spintimestep,
+                            drift_type dtype);
+  //CM
+  int isdynspin;
   
   drift_type dtype;
   Array1 <Point> trace;
   Array1 <doublevar> timesteps;
+  //CM
+  Array1 <doublevar> spintimesteps;
   int recursion_depth_;
   doublevar divide_;
   
@@ -210,6 +256,13 @@ class Split_sampler:public Dynamics_generator {
 doublevar transition_prob(Point &  point1, Point & point2,
                           doublevar timestep, 
                           drift_type dtype);
+
+//CM
+doublevar transition_prob(Point &  point1, Point & point2,
+                          doublevar timestep,
+			  doublevar spintimestep, 
+                          drift_type dtype);
+
 
 
 /*!
@@ -250,6 +303,17 @@ class UNR_sampler:public Dynamics_generator {
              Dynamics_info & info,
              doublevar & efftimestep
              );
+  //CM
+  int sample(int e,
+             Sample_point * sample, 
+             Wavefunction * wf, 
+             Wavefunction_data * wfdata, 
+             Guiding_function * guidewf,
+             Dynamics_info & info,
+             doublevar & efftimestep,
+	     doublevar & spintimestep
+             ) { error("UNR dynamics not implemented for dynamic spin calculations"); 
+                 return 0;}
 
   void showStats(ostream & os);
   void resetStats();
@@ -276,6 +340,17 @@ class SRK_dmc:public Dynamics_generator {
                Dynamics_info & info,
                doublevar & efftimestep
               );
+    //CM
+    int sample(int e,
+               Sample_point * sample, 
+               Wavefunction * wf, 
+               Wavefunction_data * wfdata, 
+               Guiding_function * guidewf,
+               Dynamics_info & info,
+               doublevar & efftimestep,
+	       doublevar & spintimestep
+              ) { error("SRK dynamics not implemented for dynamic spin calculations");
+                  return 0; }
     virtual void read(vector <string> & words);
     virtual doublevar greenFunction(Sample_point * sample, Wavefunction * wf,
                              Wavefunction_data * wfdata, Guiding_function * guidewf,
@@ -323,6 +398,8 @@ class SRK_dmc:public Dynamics_generator {
 
 int allocate(vector <string> & words, Dynamics_generator *& sam);
 void limDrift(Array1 <doublevar> & drift, doublevar tau, drift_type dtype);
+//CM
+void limDrift(Array1 <doublevar> & drift, doublevar tau, doublevar stau, drift_type dtype);
 
 
 #endif //SPLIT_SAMPLE_H_INCLUDED

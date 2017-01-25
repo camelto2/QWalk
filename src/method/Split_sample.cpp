@@ -81,6 +81,64 @@ void limDrift(Array1 <doublevar> & drift, doublevar tau, drift_type dtype)
   }
   
 }
+//CM
+void limDrift(Array1 <doublevar> & drift, doublevar tau, doublevar stau, drift_type dtype)
+{
+  assert(drift.GetDim(0) == 4);
+  doublevar drift2=0;
+  doublevar drifta=0;
+  doublevar sdrift2=0;
+  doublevar sdrifta=0;
+
+
+  if(dtype==drift_cutoff) {
+    const doublevar drmax=4;
+    
+    for(int d=0; d<3; d++)
+        drift2+=drift(d)*drift(d);
+    sdrift2=drift(3)*drift(3);
+
+    drifta= drmax/max( (doublevar)  sqrt(drift2), drmax);
+    sdrifta=drmax/max( (doublevar) sqrt(sdrift2), drmax);
+    //cout << "drifta " << drifta*tau << endl;
+    for(int d=0; d<3; d++) {
+        drift(d)*= tau*drifta;
+      }
+    drift(3) *= stau*sdrifta;
+  }
+  else if(dtype==drift_cyrus) {
+    
+    const doublevar acyrus=0.25;
+    
+    doublevar tau2=tau*2.;
+    doublevar stau2=stau*2.;
+    
+    for(int d=0; d<3; d++)
+      {
+        drift2+=drift(d)*drift(d);
+      }
+    sdrift2 = drift(3)*drift(3);
+    
+    drift2*=acyrus;
+    sdrift2*=acyrus;
+    if(drift2 > 1e-8) 
+      drifta=(sqrt(1.+tau2*drift2)-1)/(drift2);
+    else drifta=tau;
+    if (sdrift2 > 1e-8)
+      sdrifta=(sqrt(1.+stau2*sdrift2)-1)/(sdrift2);
+    else sdrifta=stau;
+    
+    //cout << "drifta " << drifta << endl;
+    for(int d=0; d<3; d++)
+      drift(d)*=drifta;
+    drift(3)*=sdrifta;
+    
+  }
+  else {
+    error("Unknown drift_type in limDrift");
+  }
+  
+}
 
 //-------------------------------------------------------------------
 
@@ -108,6 +166,31 @@ doublevar Split_sampler::transition_prob(int point1, int point2,
   
   return prob;
 }
+//CM
+doublevar Split_sampler::transition_prob(int point1, int point2,
+                                         doublevar timestep, 
+					 doublevar spintimestep,
+                                         drift_type dtype) {
+  doublevar prob=0;
+  assert(trace(point1).drift.GetDim(0) == 4);
+  static Array1 <doublevar> drift(4);
+  //cout << "transition probability" << endl;
+
+  drift=trace(point1).drift;
+
+  limDrift(drift, timestep, spintimestep, dtype);
+
+  for(int d=0; d< 3; d++) {
+    
+    prob-=(trace(point2).pos(d)-trace(point1).pos(d)-drift(d))
+      *(trace(point2).pos(d)-trace(point1).pos(d)-drift(d));
+  }
+  prob/=(2.0*timestep);
+  prob-=( (trace(point2).pos(3)-trace(point1).pos(3)-drift(3))
+      *(trace(point2).pos(3)-trace(point1).pos(3)-drift(3)) )/(2.0*spintimestep);
+  
+  return prob;
+}
 
 doublevar transition_prob(Point &  point1, Point & point2,
                           doublevar timestep, drift_type dtype) {
@@ -127,10 +210,33 @@ doublevar transition_prob(Point &  point1, Point & point2,
   prob/=(2.0*timestep);
   return prob;
 }
+//CM
+doublevar transition_prob(Point &  point1, Point & point2,
+                          doublevar timestep, doublevar spintimestep, drift_type dtype) {
+  doublevar prob=0;
+  assert(point1.drift.GetDim(0) == 4);
+  Array1 <doublevar> drift(4);
+  //cout << "transition probability" << endl;
+
+  drift=point1.drift;
+
+  
+  limDrift(drift, timestep, spintimestep, dtype);
+
+  for(int d=0; d< 3; d++) {
+    prob-=(point2.pos(d)-point1.pos(d)-drift(d))
+      *(point2.pos(d)-point1.pos(d)-drift(d));
+  }
+  prob/=(2.0*timestep);
+  prob -= ( (point2.pos(3)-point1.pos(3)-drift(3))
+      *(point2.pos(3)-point1.pos(3)-drift(3)) )/(2.0*spintimestep);
+  return prob;
+}
 
 //---------------------------------------------------------------------
 
-
+//CM 
+//not touching SRK
 doublevar runge_kutta_resamp(Point & p1, Point & p2,
                                doublevar timestep, drift_type dtype,
                           int ndim=3) {
@@ -151,7 +257,8 @@ doublevar runge_kutta_resamp(Point & p1, Point & p2,
   return -green_forward/(2*timestep);
 }
 
-
+//CM
+//not touching SRK
 doublevar runge_kutta_symm(Point & p1, Point & p2,
                                doublevar timestep, drift_type dtype,
                           int ndim=3) {
@@ -197,6 +304,36 @@ doublevar linear_symm(Point & p1, Point & p2,
     //      +.25*(dr2(d)+dr1(d))*(dr2(d)+dr1(d));
   }
   return -green_forward/(2*timestep);
+}
+
+//CM
+doublevar linear_symm(Point & p1, Point & p2,
+		      doublevar timestep, doublevar spintimestep, drift_type dtype,
+		      int ndim=4) {
+  Array1 <doublevar> dr1(ndim), dr2(ndim);
+  dr1=p1.drift; dr2=p2.drift;
+
+  limDrift(dr1, timestep, spintimestep, dtype);
+  limDrift(dr2, timestep, spintimestep, dtype);
+
+  doublevar green_forward=0;
+  for(int d=0; d< 3; d++) {
+    
+    green_forward+=(p2.pos(d)-p1.pos(d))*(p2.pos(d)-p1.pos(d))
+      +(p2.pos(d)-p1.pos(d))*(dr2(d)-dr1(d))
+      +.5*(dr2(d)*dr2(d)+dr1(d)*dr1(d));
+
+    // Runge-kutta move
+    //doublevar tmp=p2.pos(d)-p1.pos(d)-.5*(dr2(d)+dr1(d));
+    //green_forward+=tmp*tmp;
+    //green_forward+=(p2.pos(d)-p1.pos(d))*(p2.pos(d)-p1.pos(d))
+    //      +.25*(dr2(d)+dr1(d))*(dr2(d)+dr1(d));
+  }
+  green_forward /= 2.0*timestep;
+  green_forward+=( (p2.pos(3)-p1.pos(3))*(p2.pos(3)-p1.pos(3))
+      +(p2.pos(3)-p1.pos(3))*(dr2(3)-dr1(3))
+      +.5*(dr2(3)*dr2(3)+dr1(3)*dr1(3)) )/(2.0*spintimestep);
+  return -green_forward;
 }
 
 //----------------------------------------------------------------------
@@ -293,6 +430,81 @@ doublevar Dynamics_generator::greenFunction(Sample_point * sample, Wavefunction 
   
   return info.acceptance;
 }
+//CM
+doublevar Dynamics_generator::greenFunction(Sample_point * sample, Wavefunction * wf,
+                                  Wavefunction_data * wfdata, 
+                                  Guiding_function * guidingwf,
+                                  int e,
+                                  Array1 <doublevar> & newpos, 
+                                  doublevar timestep,
+				  doublevar spintimestep,
+                                  Dynamics_info & info, Dynamics_info & oldinfo) {
+                                    
+  //cout << "auxillary " << endl;
+  assert(sample->ndim() == 4);
+  int ndim=sample->ndim();
+  drift_type dtype=drift_cyrus;
+  assert(newpos.GetDim(0) >= ndim);
+  wf->updateLap(wfdata, sample);
+  Point p1; p1.lap.Resize(wf->nfunc(), ndim+2);
+  p1.pos.Resize(ndim);p1.drift.Resize(ndim);
+  p1.gauss.Resize(ndim); p1.translation.Resize(ndim);
+  p1.sign=sample->overallSign();
+
+  sample->getElectronPos(e,p1.pos);
+  wf->getLap(wfdata, e, p1.lap);
+  guidingwf->getLap(p1.lap, p1.drift);  
+  
+  
+  for(int d=0; d< ndim; d++) 
+    p1.translation(d)=newpos(d)-p1.pos(d);
+  
+  sample->translateElectron(e,p1.translation);
+  wf->updateLap(wfdata, sample);
+  Point p2; p2.lap.Resize(wf->nfunc(), ndim+2);
+  p2.drift.Resize(ndim); p2.pos.Resize(ndim);
+  p2.gauss.Resize(ndim); p2.translation.Resize(ndim);
+  p2.sign=sample->overallSign();
+  p2.pos=newpos;
+  wf->getLap(wfdata, e, p2.lap);
+  guidingwf->getLap(p2.lap, p2.drift);  
+  
+
+  info.green_forward=exp(::transition_prob(p1, p2, timestep, spintimestep, dtype));
+  info.green_backward=::transition_prob(p2,p1, timestep, spintimestep, dtype);
+  info.symm_gf=exp(linear_symm(p1, p2, timestep, spintimestep, dtype));
+  
+  //cout << "gf:elec " << e << " new wfval " << p2.lap.amp(0,0) << endl;
+  info.diffuse_start=p1.drift;
+  limDrift(info.diffuse_start, timestep, spintimestep, dtype);
+  for(int d=0; d< ndim; d++) {
+    //cout << "secondary drift " << info.drift_pos(d) << endl;
+    info.diffuse_start(d)+=p1.pos(d);
+  }
+  info.diffuse_end=newpos;
+  info.orig_pos=p1.pos;
+  info.new_pos=newpos;
+  info.diffusion_rate=0;
+  for(int d=0; d< ndim; d++) 
+    info.diffusion_rate+=(info.diffuse_end(d)-info.diffuse_start(d))
+                        *(info.diffuse_end(d)-info.diffuse_start(d));
+  
+  info.acceptance=min(1.0, (exp(info.green_backward)/info.green_forward)
+                           *guidingwf->getTrialRatio(p2.lap, p1.lap)
+                           *guidingwf->getTrialRatio(p2.lap, p1.lap));
+
+
+  //trying a better gf
+  //info.green_forward*=info.acceptance;///oldinfo.acceptance;
+  //--------
+  
+
+  info.accepted=0;
+  doublevar ratio=guidingwf->getTrialRatio(p1.lap,p2.lap)*p1.sign*p2.sign;
+  if(ratio < 0) cout << "crossed node " << endl;
+  
+  return info.acceptance;
+}
 
 
 //----------------------------------------------------------------------
@@ -328,8 +540,18 @@ doublevar Split_sampler::get_acceptance(Guiding_function * guidingwf,
     //     << " (timestep " << timesteps(dist)
     //     <<  endl;
 
-    doublevar num=transition_prob(y,y-dir*dist,timesteps(dist), dtype);
-    doublevar den=transition_prob(x,x+dir*dist,timesteps(dist), dtype);
+    //CM
+    //doublevar num=transition_prob(y,y-dir*dist,timesteps(dist), dtype);
+    //doublevar den=transition_prob(x,x+dir*dist,timesteps(dist), dtype);
+    doublevar num, den;
+    if (isdynspin) {
+      num=transition_prob(y,y-dir*dist,timesteps(dist), spintimesteps(dist), dtype);
+      den=transition_prob(x,x+dir*dist,timesteps(dist), spintimesteps(dist), dtype);
+    }
+    else {
+      num=transition_prob(y,y-dir*dist,timesteps(dist), dtype);
+      den=transition_prob(x,x+dir*dist,timesteps(dist), dtype);
+    }
     prob_transition+=num-den;
     //cout << indent <<  "num " << num << " den " << den << " num-den " << num-den << endl;
   }
@@ -476,6 +698,113 @@ int Split_sampler::split_driver(int e,
   }
   
 }
+//CM
+int Split_sampler::split_driver(int e,
+                                Sample_point * sample,
+                                Wavefunction * wf, 
+                                Wavefunction_data * wfdata,
+                                Guiding_function * guidingwf,
+                                int depth,
+                                Dynamics_info & info,
+                                doublevar & efftimestep,
+				doublevar & spintimestep) {
+
+  //cout << "primary " << endl;
+  assert(trace.GetDim(0) >= depth);
+  assert(recursion_depth_ <= timesteps.GetDim(0));
+  assert(recursion_depth_ <= spintimesteps.GetDim(0));
+  assert(sample->ndim() == 4);
+  int ndim=sample->ndim();
+
+  if(depth > recursion_depth_) return 0;
+
+  static Array1 <doublevar> c_olddrift(ndim);
+  static Array1 <doublevar> c_newdrift(ndim);
+  
+  c_olddrift=trace(0).drift;  
+  limDrift(c_olddrift, timesteps(depth), spintimesteps(depth), dtype);
+
+
+  //cout << "drift " << c_olddrift(0) << "  " 
+  //     << c_olddrift(1) << "  " << c_olddrift(2) << endl;
+  //info.drift_pos.Resize(3);
+  
+  for(int d=0; d< 3; d++) {
+    trace(depth).gauss(d)=rng.gasdev();
+    trace(depth).translation(d)=trace(depth).gauss(d)*sqrt(timesteps(depth))
+        + c_olddrift(d);
+    trace(depth).pos(d)=trace(0).pos(d)
+        + trace(depth).translation(d);
+  }
+  trace(depth).gauss(3)=rng.gasdev();
+  trace(depth).translation(3)=trace(depth).gauss(3)*sqrt(spintimesteps(depth))
+      + c_olddrift(3);
+  trace(depth).pos(3)=trace(0).pos(3)
+      + trace(depth).translation(3);
+
+  doublevar diffusion_rate=0;
+  for(int d=0; d< 3; d++) 
+    diffusion_rate+=trace(depth).gauss(d)*timesteps(depth)*trace(depth).gauss(d);;
+  diffusion_rate+=trace(depth).gauss(3)*spintimesteps(depth)*trace(depth).gauss(3);;
+  
+  
+  sample->translateElectron(e, trace(depth).translation);
+  trace(depth).sign=sample->overallSign();
+  
+  if(wfdata->supports(laplacian_update) ) {
+    wf->updateLap(wfdata, sample);
+    wf->getLap(wfdata, e, trace(depth).lap);
+  }
+  else {
+    wf->updateForceBias(wfdata, sample);
+    wf->getForceBias(wfdata, e, trace(depth).lap);
+  }
+  
+  guidingwf->getLap(trace(depth).lap, trace(depth).drift);
+
+  //indent="";
+  //cout << "#######################acceptance for " << depth << endl;
+  doublevar acc=get_acceptance(guidingwf, 0,depth);
+  //cout << "acceptance for " << depth << " : " <<  acc << endl;    
+
+  info.green_forward=exp(transition_prob(0,depth,timesteps(depth),spintimesteps(depth),dtype));
+  //cout << "green_forward " << info.green_forward << endl;
+  info.green_backward=exp(transition_prob(depth,0,timesteps(depth),spintimesteps(depth),dtype));
+  info.diffusion_rate=diffusion_rate;
+  info.acceptance=acc;
+  info.orig_pos=trace(0).pos;
+  info.diffuse_start.Resize(ndim);
+  for(int d=0; d< ndim; d++)
+    info.diffuse_start(d)=trace(0).pos(d)+c_olddrift(d);
+  info.diffuse_end=trace(depth).pos;
+  info.new_pos=trace(depth).pos;
+  info.gauss=trace(depth).gauss;
+  
+  info.symm_gf=exp(linear_symm(trace(0), trace(depth), timesteps(depth), spintimesteps(depth), dtype));
+  info.resample_gf=info.symm_gf;
+  //trying a better gf
+  //info.green_forward*=info.acceptance;
+  //--------
+  
+  
+  if (acc+rng.ulec() > 1.0) {
+    info.accepted=1;
+    return depth;
+  }
+  else {
+    info.accepted=0;
+    
+    static Array1 <doublevar> rev(ndim,0.0);
+    for(int d=0; d< ndim; d++) rev(d)=-trace(depth).translation(d);
+    sample->translateElectron(e,rev);
+
+    depth++;
+    
+    return split_driver(e,sample, wf, wfdata, guidingwf, 
+                        depth, info, efftimestep,spintimestep);
+  }
+  
+}
 
 
 //----------------------------------------------------------------------
@@ -519,6 +848,69 @@ int Split_sampler::sample(int e,
   
   int acc=split_driver(e, sample, wf, wfdata, guidingwf, depth,  
                       info, efftimestep);
+
+  if(acc > 0) {
+    acceptances(acc-1)++;
+    for(int i=0; i< acc; i++) {
+      tries(i)++;
+    }
+  }
+  else {
+    for(int i=0; i< recursion_depth_; i++) {
+      tries(i)++;
+    }
+  }
+
+  if(!acc) {
+    wfStore.restoreUpdate(sample, wf, e);
+  }
+  //cout << "-----------split done" << endl;
+  return acc;
+}
+//CM
+int Split_sampler::sample(int e,
+                          Sample_point * sample, 
+                          Wavefunction * wf, 
+                          Wavefunction_data * wfdata,
+                          Guiding_function * guidingwf,
+                          Dynamics_info & info,
+                          doublevar & efftimestep,
+			  doublevar & spintimestep) {
+  isdynspin = 1;
+  if(! wfStore.isInitialized())
+    wfStore.initialize(sample, wf);
+  
+  wf->updateLap(wfdata, sample);
+  wfStore.saveUpdate(sample, wf, e);
+  trace.Resize(recursion_depth_+1);
+
+  for(int i=0; i < recursion_depth_+1; i++) {
+    trace(i).lap.Resize(wf->nfunc(), 6);
+  }
+
+  timesteps.Resize(recursion_depth_+1);
+  spintimesteps.Resize(recursion_depth_+1);
+  timesteps=efftimestep;
+  spintimesteps=spintimestep;
+
+    
+  for(int i=2; i< recursion_depth_+1; i++) {
+    timesteps(i)=efftimestep/pow(divide_,i-1);
+    spintimesteps(i)=spintimestep/pow(divide_,i-1);
+  }
+
+  int depth=0;
+
+  sample->getElectronPos(e,trace(depth).pos);
+  wf->getLap(wfdata, e, trace(depth).lap);
+  trace(depth).sign=sample->overallSign();
+
+  guidingwf->getLap(trace(depth).lap, trace(depth).drift);
+  depth++;
+
+  
+  int acc=split_driver(e, sample, wf, wfdata, guidingwf, depth,  
+                      info, efftimestep,spintimestep);
 
   if(acc > 0) {
     acceptances(acc-1)++;
