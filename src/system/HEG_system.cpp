@@ -133,6 +133,8 @@ int HEG_system::read(vector <string> & words,
 {
   const int ndim=3;
   int startpos=pos;
+  //CM
+  isdynspin = 0;
 
   vector <string> latvectxt;
 

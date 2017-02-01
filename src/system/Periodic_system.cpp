@@ -45,6 +45,8 @@ int Periodic_system::generateSample(Sample_point *& samptr)
 
 int Periodic_system::showinfo(ostream & os)
 {
+  //CM
+  isdynspin = 0;
   const int ndim=3;
   os << "Periodic system " << endl;
   os << "Lattice vectors:" << endl;

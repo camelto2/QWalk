@@ -255,7 +255,6 @@ void Molecular_sample::updateEEDist()
 void Molecular_sample::init(System * sys) {
   assert(sys != NULL);
   recast(sys, parent); //assign sys to parent
-
   int nions=parent->ions.size();
   //CM
   //nelectrons=parent->nelectrons(0)+parent->nelectrons(1);
@@ -270,6 +269,7 @@ void Molecular_sample::init(System * sys) {
   //ionDistStale.Resize(nelectrons);
   //elecDistStale=1;
   //ionDistStale=1;
+  isdynspin = sys->isdynspin;
   int dim;
   if (isdynspin) {
       dim = 4;

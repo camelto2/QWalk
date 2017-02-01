@@ -53,7 +53,6 @@ int Molecular_system::showinfo(ostream & os)
 int Molecular_system::read(vector <string> & words,
                            unsigned int & pos)
 {
-
   //CM
   //nspin.Resize(2);
   //unsigned int startpos=pos;
@@ -74,12 +73,15 @@ int Molecular_system::read(vector <string> & words,
   if (spintxt.size() == 1) {
     nspin.Resize(1);
     nspin(0) = atoi(spintxt[0].c_str());
+    isdynspin = 1;
   }
   else {
     nspin.Resize(2);
     nspin(0) = atoi(spintxt[0].c_str());
     nspin(1) = atoi(spintxt[1].c_str());
+    isdynspin = 0;
   }
+
 
   //restrict initial walkers to a given range
   vector <string> inirangetxt;
@@ -191,7 +193,7 @@ void Molecular_system::calcLocWithTestPos(Sample_point * sample,
   //the getElectronPos functions can return it correctly
   int nions=sample->ionSize();
   //CM
-  int isdynspin = sample->isdynspin;
+  assert(isdynspin == sample->isdynspin);
   int nelectrons=sample->electronSize();
   Vtest.Resize(nelectrons + 1);
   Vtest = 0; 
