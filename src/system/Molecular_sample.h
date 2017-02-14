@@ -110,7 +110,7 @@ public:
     //   distance(i)=iondist(i,ion,e);
     // }
     if (isdynspin) {
-      assert(distance.GetDim(0) >= 6);
+      distance.Resize(6);
       assert(!ionDistStale(e));
       for (int i = 0; i < 6; i++) {
 	distance(i)=iondist(i,ion,e);
@@ -137,7 +137,7 @@ public:
     distance(0)=sqrt(distance(1));
     //CM
     if (isdynspin) 
-	distance(5) = elecpos(e,5); //just pass the spin around even if not used
+	distance(5) = elecpos(e,3); //just pass the spin around even if not used
     return 1;
   }
 

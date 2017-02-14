@@ -178,7 +178,7 @@ void Molecular_sample::updateEIDist()
 	//then difference in the electron and nuclear spin would 
 	//be added here
 	if (isdynspin) 
-          iondist(5,j,e)=elecpos(e,5);
+          iondist(5,j,e)=elecpos(e,3);  //x,y,z,s
       }
 
       for(int j=0; j<nions; j++)
