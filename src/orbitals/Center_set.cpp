@@ -52,7 +52,11 @@ void Center_set::read(vector <string> & words, unsigned int pos,
 {
 
   usingsampcenters=usingatoms=0;
-  int nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
+  //CM
+  //int nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
+  int nelectrons;
+  if (sys->isdynspin) nelectrons = sys->nelectrons(0);
+  else nelectrons = sys->nelectrons(0)+sys->nelectrons(1);
   unsigned int startpos=pos;
 
   if(readvalue(words,pos, centerfile, "READ"))

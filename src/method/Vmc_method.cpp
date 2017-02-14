@@ -355,7 +355,7 @@ void Vmc_method::runWithVariables(Properties_manager & prop,
 {
   //CM
   //nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
-  if (sys->nelectrons(1) == -1) nelectrons=sys->nelectrons(0);
+  if (sys->isdynspin) nelectrons=sys->nelectrons(0);
   else nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
 
   

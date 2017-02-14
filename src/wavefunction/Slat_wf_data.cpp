@@ -176,8 +176,8 @@ void Slat_wf_data::read(vector <string> & words, unsigned int & pos,
 
   //nelectrons(0)=sys->nelectrons(0);
   //nelectrons(1)=sys->nelectrons(1);
-  int sd = sys->nelectrons(1);
-  if (sd == -1) 
+  //
+  if (sys->isdynspin) 
     nelectrons.Resize(1);
   else
     nelectrons.Resize(2);
@@ -187,32 +187,21 @@ void Slat_wf_data::read(vector <string> & words, unsigned int & pos,
   vector <string> nspinstr;
   if(readsection(words, pos, nspinstr, "NSPIN"))
   {
-    //CM
-    //if(nspinstr.size() != 2)
-    //  error("NSPIN must have 2 elements");
-    //nelectrons(0)=atoi(nspinstr[0].c_str());
-    //nelectrons(1)=atoi(nspinstr[1].c_str());
-    //if(nelectrons(0)+nelectrons(1) != sys->nelectrons(0)+sys->nelectrons(1)) {
-    //  error("NSPIN must specify the same number of electrons as the SYSTEM "
-    //      "in SLATER.");
-    //}
-    int nspin = nspinstr.size();
-    if(nspin >= 3) error("NSPIN must be either 1 or 2 elements");
-    if (sd == -1 && nspin != 1) {
-	error("NSPIN must be of the same form as SYSTEM in SLATER.");
+    if(nspinstr.size() != 2)
+      error("NSPIN must have 2 elements");
+    nelectrons(0)=atoi(nspinstr[0].c_str());
+    nelectrons(1)=atoi(nspinstr[1].c_str());
+    if(nelectrons(0)+nelectrons(1) != sys->nelectrons(0)+sys->nelectrons(1)) {
+      error("NSPIN must specify the same number of electrons as the SYSTEM "
+          "in SLATER.");
     }
-    nelectrons.Resize(nspin);
-    int ss1 = 0;
-    int ss2 = 0;
-    for (int s = 0; s < nspin; s++) {
-      nelectrons(s) = atoi(nspinstr[s].c_str());
-      ss1 += nelectrons(s);
-    }
-    for (int s = 0; s < nspin; s++) ss2 += sys->nelectrons(s);
-    if (ss1 != ss2) {
-      error("NSPIN must specify the same number of electrons as the SYSTEM"
-            "in SLATER.");
-    }
+  }
+  
+  //CM
+  pos=startpos;
+  vector<string> dynspinstr;
+  if(readsection(words, pos, dynspinstr, "DYNSPIN")) {
+      error("DYNSPIN only supported in the SYSTEM section");
   }
 
   pos=startpos;

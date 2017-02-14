@@ -199,7 +199,7 @@ int Dmc_method::allocateIntermediateVariables(System * sys,
   sample=NULL;
   //CM
   //nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
-  if (sys->nelectrons(1) == -1) nelectrons=sys->nelectrons(0);
+  if (sys->isdynspin) nelectrons=sys->nelectrons(0);
   else nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
   wfdata->generateWavefunction(wf);
   sys->generateSample(sample);
@@ -676,7 +676,7 @@ void Dmc_method::restorecheckpoint(string & filename, System * sys,
     //CM
     //pts(walker).age.Resize(sys->nelectrons(0)+sys->nelectrons(1));
     int ne;
-    if (sys->nelectrons(1) == -1) ne = sys->nelectrons(0);
+    if (sys->isdynspin) ne = sys->nelectrons(0);
     else ne = sys->nelectrons(0)+sys->nelectrons(1);
     pts(walker).age.Resize(ne);
     pts(walker).age=0;
