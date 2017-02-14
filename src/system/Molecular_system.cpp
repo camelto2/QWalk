@@ -65,23 +65,30 @@ int Molecular_system::read(vector <string> & words,
   //
   //If we see NSPIN { N } instead of NSPIN { NUP DWN }, then we are
   //dealing with a dynamic spin calculation
+  
   unsigned int startpos = pos;
   vector <string> spintxt;
+  bool nspin = true;
+  bool dynspin = true;
   if(!readsection(words, pos, spintxt, "NSPIN")) {
-    error("Need NSPIN in molecular system");
+      nspin = false;
   }
-  if (spintxt.size() == 1) {
-    nspin.Resize(1);
-    nspin(0) = atoi(spintxt[0].c_str());
-    isdynspin = 1;
-  }
-  else {
-    nspin.Resize(2);
-    nspin(0) = atoi(spintxt[0].c_str());
-    nspin(1) = atoi(spintxt[1].c_str());
-    isdynspin = 0;
+  if(!readsection(words, pos, spintxt, "DYNSPIN")) {
+      dynspin = false;
   }
 
+  if (nspin == true && dynspin == false) {
+    nspin(0)=atoi(spintxt[0].c_str());
+    nspin(1)=atoi(spintxt[1].c_str());
+    isdynspin = 0;
+  }
+  else if (nspin == false && dynspin == true) {
+      nspin(0)=atoi(spintxt[0].c_str());
+      isdynspin = 1;
+  }
+  else
+    error("Need NSPIN or DYNSPIN in molecular system");
+  }
 
   //restrict initial walkers to a given range
   vector <string> inirangetxt;
