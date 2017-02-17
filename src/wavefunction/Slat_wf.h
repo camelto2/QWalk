@@ -552,7 +552,13 @@ template <class T> inline void Slat_wf<T>::updateVal(Wavefunction_data * wfdata,
     electronIsStaleVal=0;
   }
   else {
-    for(int e=0; e< nelectrons(0)+nelectrons(1); e++) {
+    //CM
+    int ss = nelectrons.GetDim(0);
+    int tote = 0; 
+    for (int s = 0; s < ss; s++)  tote += nelectrons(s);
+    //CM
+    //for(int e=0; e< nelectrons(0)+nelectrons(1); e++) {
+    for (int e = 0; e < tote; e++) {
       if(electronIsStaleVal(e)) {
         updateVal(parent, sample, e);
         electronIsStaleVal(e)=0;

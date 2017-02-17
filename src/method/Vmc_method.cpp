@@ -353,10 +353,7 @@ void Vmc_method::runWithVariables(Properties_manager & prop,
                                   Pseudopotential * psp,
                                   ostream & output)
 {
-  //CM
-  //nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
-  if (sys->isdynspin) nelectrons=sys->nelectrons(0);
-  else nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
+  nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
 
   
   allocateIntermediateVariables(sys, wfdata);

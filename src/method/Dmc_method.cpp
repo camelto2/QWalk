@@ -198,9 +198,7 @@ int Dmc_method::allocateIntermediateVariables(System * sys,
   if(sample) delete sample;
   sample=NULL;
   //CM
-  //nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
-  if (sys->isdynspin) nelectrons=sys->nelectrons(0);
-  else nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
+  nelectrons=sys->nelectrons(0)+sys->nelectrons(1);
   wfdata->generateWavefunction(wf);
   sys->generateSample(sample);
   sample->attachObserver(wf);
@@ -673,12 +671,7 @@ void Dmc_method::restorecheckpoint(string & filename, System * sys,
     mygather.gatherData(pts(walker).prop, pseudo, sys,
                         wfdata, wf, sample,
                         guidingwf);
-    //CM
-    //pts(walker).age.Resize(sys->nelectrons(0)+sys->nelectrons(1));
-    int ne;
-    if (sys->isdynspin) ne = sys->nelectrons(0);
-    else ne = sys->nelectrons(0)+sys->nelectrons(1);
-    pts(walker).age.Resize(ne);
+    pts(walker).age.Resize(sys->nelectrons(0)+sys->nelectrons(1));
     pts(walker).age=0;
   }
   find_cutoffs();
