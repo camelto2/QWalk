@@ -224,13 +224,17 @@ public:
 
   virtual void getLap(Wf_return & laps, Array1 <doublevar> & ret)
   {
-
     assert(ret.GetDim(0)>=3);
-    int max=min(ret.GetDim(0)+1, laps.amp.GetDim(1));
-
-    for(int d=1; d< max; d++) {
+    int max=min(ret.GetDim(0)+1, laps.amp.GetDim(1)); 
+    cout << max << endl;
+    //CM
+    //for(int d=1; d< max; d++) {
+    for(int d=1; d< 4; d++) {
       ret(d-1)=laps.amp(0,d);
     }
+    //CM
+    if (ret.GetDim(0) == 4)
+      ret(3) = laps.amp(0,5);
   }
 
   virtual doublevar getTrialRatio(Wf_return & newfunc,
@@ -274,8 +278,13 @@ public:
     assert(ret.GetDim(0) >= 3);
     assert(laps.amp.GetDim(0) >=1);
     int max=min(ret.GetDim(0)+1, laps.amp.GetDim(1));
-    for(int d=1; d< max; d++)
+    //CM
+    //for(int d=1; d< max; d++)
+    for(int d=1; d< 4; d++)
       ret(d-1)=laps.amp(0,d);
+    //CM
+    if(ret.GetDim(0) == 4)
+      ret(3) = laps.amp(0,5);
   }
 
   virtual doublevar getOperatorWeight(Wf_return & lap, int w) {
@@ -336,8 +345,13 @@ class Primary_noderelease:public Dmc_guiding_function {
 
     //cout <<" getLap: factor "<<factor<<endl;
 
-    for(int d=1; d< max; d++)
+    //CM
+    //for(int d=1; d< max; d++)
+    for(int d=1; d< 4; d++)
       ret(d-1)=laps.amp(0,d)*factor;
+    //CM
+    if (ret.GetDim(0) == 4)
+      ret(3) = laps.amp(0,5)*factor;
   }
 
   virtual doublevar getOperatorWeight(Wf_return & lap, int w) {
