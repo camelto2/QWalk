@@ -43,6 +43,10 @@ def write_basis(basename,mol):
 
 def write_jast3(basename,mol):
     fout = open(basename+'.jast3','w')
+    unique_atoms = []
+    for ia in range(mol.natm):
+        if mol.atom_pure_symbol(ia) not in unique_atoms:
+            unique_atoms.append(mol.atom_pure_symbol(ia))
     fout.write('''JASTROW2
 GROUP {
  OPTIMIZEBASIS
@@ -54,14 +58,14 @@ GROUP {
   }
 }''')
     fout.write('\nGROUP {\n OPTIMIZEBASIS\n EEBASIS { EE POLYPADE BETA0 0.5 NFUNC 4 RCUT 7.5 }\n''')
-    for ia in range(mol.natm):
-        fout.write(' EIBASIS { '+mol.atom_pure_symbol(ia)+' POLYPADE BETA0 0.2 NFUNC 4 RCUT 7.5 }\n')
+    for ia in range(len(unique_atoms)):
+        fout.write(' EIBASIS { '+unique_atoms[ia]+' POLYPADE BETA0 0.2 NFUNC 4 RCUT 7.5 }\n')
     fout.write(' ONEBODY {\n')
-    for ia in range(mol.natm):
-        fout.write('  COEFFICIENTS { '+mol.atom_pure_symbol(ia)+' 0 0 0 0 }\n')
+    for ia in range(len(unique_atoms)):
+        fout.write('  COEFFICIENTS { '+unique_atoms[ia]+' 0 0 0 0 }\n')
     fout.write(' }\n TWOBODY {\n  COEFFICIENTS { 0 0 0 0 }\n }\n THREEBODY {\n')
-    for ia in range(mol.natm):
-        fout.write('COEFFICIENTS { '+mol.atom_pure_symbol(ia)+' 0 0 0 0 0 0 0 0 0 0 0 0 }\n')
+    for ia in range(len(unique_atoms)):
+        fout.write('COEFFICIENTS { '+unique_atoms[ia]+' 0 0 0 0 0 0 0 0 0 0 0 0 }\n')
     fout.write(' }\n}')
 
 
