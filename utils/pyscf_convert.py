@@ -13,33 +13,33 @@ def write_basis(basename,mol):
     fout = open(basename+'.basis','w')
     for ia in mol._basis.keys():
         fout.write('BASIS {\n')
-	fout.write(ia+'\n')
-	fout.write('AOSPLINE\n\n')
-	fout.write('GAMESS {\n')
+        fout.write(ia+'\n')
+        fout.write('AOSPLINE\n\n')
+        fout.write('GAMESS {\n')
         for ib in range(len(mol._basis[ia])):
             l = mol._basis[ia][ib][0]
             np = len(mol._basis[ia][ib])-1
             nc = len(mol._basis[ia][ib][1])-1
             for c in range(nc):
-	        if (l == 0):
-	            fout.write('S  '+str(np)+'\n')
-	        elif (l == 1):
-	            fout.write('P  '+str(np)+'\n')
-	        elif (l == 2):
-	            fout.write('5D '+str(np)+'\n')
-	        elif (l == 3):
-	            fout.write('7F_crystal '+str(np)+'\n')
-	        elif (l == 4):
-	            fout.write('9G '+str(np)+'\n')
-	        else:
-	            sys.stderr.write('QWalk cannot handle higher than G basis functions\n')
-	            sys.stderr.write('Exiting!')
-	            exit()
+                if (l == 0):
+                    fout.write('S  '+str(np)+'\n')
+                elif (l == 1):
+                    fout.write('P  '+str(np)+'\n')
+                elif (l == 2):
+                    fout.write('5D '+str(np)+'\n')
+                elif (l == 3):
+                    fout.write('7F_crystal '+str(np)+'\n')
+                elif (l == 4):
+                    fout.write('9G '+str(np)+'\n')
+                else:
+                    sys.stderr.write('QWalk cannot handle higher than G basis functions\n')
+                    sys.stderr.write('Exiting!')
+                    exit()
                 for p in range(np):
                     exp = mol._basis[ia][ib][p+1][0]
                     coeff = mol._basis[ia][ib][p+1][c+1]
                     fout.write('  {}  {}  {}\n'.format(p+1,exp,coeff))
-	fout.write('}\n}\n\n')
+                    fout.write('}\n}\n\n')
 
 def write_jast3(basename,mol):
     fout = open(basename+'.jast3','w')
@@ -282,8 +282,8 @@ def write_orb(basename,mol,mf):
     count = 0
     for mo in range(nmo):
         for prim in range(nprim):
-	    fout.write('  {}  {}  {}  {}\n'.format(mo+1,prim+1,centers[prim],count+1))
-	    count += 1
+            fout.write('  {}  {}  {}  {}\n'.format(mo+1,prim+1,centers[prim],count+1))
+            count += 1
     fout.write(' COEFFICIENTS')
 
     aoidx = order_ao_index(mol)
