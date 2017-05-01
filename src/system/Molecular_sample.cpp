@@ -259,7 +259,7 @@ void Molecular_sample::randomGuess()
   //CM:
   for(int e = 0; e < nelectrons; e++) {
     doublevar trialSpin = 2.0*pi*rng.ulec();
-    setElectronSpin(e,spin);
+    setElectronSpin(e,trialSpin);
   }
   
 

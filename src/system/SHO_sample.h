@@ -127,15 +127,15 @@ public:
 
   //CM:
   //Dynamic Spin functions below
-  void getElectronSpin(const int & e, const doublevar & s) {
+  void getElectronSpin(const int e, doublevar & s) {
     error("getElectronSpin not implemented for SHO sample");
   }
 
-  void setElectronSpin(const int & e, const doublevar & s) {
+  void setElectronSpin(const int e, const doublevar & s) {
     error("setElectronSpin not implemented for SHO sample");
   }
 
-  void translateSpin(const int & e, const doublevar & trans) {
+  void translateSpin(const int e, const doublevar & trans) {
     error("translateSpin not implemented for SHO sample");
   }
 

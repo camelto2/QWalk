@@ -142,11 +142,9 @@ public:
   void restoreUpdate(int, Sample_storage *);
 
   //CM:
-  void getElectronSpin(const int & e, const doublevar & s);
+  void getElectronSpin(const int e, doublevar & s);
 
-  void setElectronSpin(const int & e, const doublevar & s);
-
-  void translateSpin(const int & e, const doublevar & trans);
+  void setElectronSpin(const int e, const doublevar & s);
 
 private:
 
