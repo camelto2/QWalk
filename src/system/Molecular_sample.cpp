@@ -53,6 +53,8 @@ void Molecular_sample::saveUpdate(int e, Sample_storage * store) {
       store->pointdist_temp(d,j)=pointdist(d,e,j);
     }
   }
+  //CM:
+  getElectronSpin(e,store->spin_temp);
 }
 
 void Molecular_sample::restoreUpdate(int e, Sample_storage * store)
@@ -78,6 +80,8 @@ void Molecular_sample::restoreUpdate(int e, Sample_storage * store)
       pointdist(d,e,j)=store->pointdist_temp(d,j);
     }
   }
+  //CM:
+  elecspin(e)=store->spin_temp;
 }
 
 
@@ -187,6 +191,8 @@ void Molecular_sample::init(System * sys) {
   ionDistStale.Resize(nelectrons);
   elecDistStale=1;
   ionDistStale=1;
+  //CM:
+  elecspin.Resize(nelectrons);
 }
 
 
@@ -249,6 +255,13 @@ void Molecular_sample::randomGuess()
     }
     setElectronPos(e,trialPos);
   }
+
+  //CM:
+  for(int e = 0; e < nelectrons; e++) {
+    doublevar trialSpin = 2.0*pi*rng.ulec();
+    setElectronSpin(e,spin);
+  }
+  
 
   ionDistStale=1;
   elecDistStale=1;
@@ -425,6 +438,21 @@ void Molecular_sample::rawInput(istream & is)
   }
      
 
+
+}
+
+void Molecular_sample::setElectronSpin(const int e, const doublevar & s) {
+
+  elecspin(e) = s;
+
+  if(wfObserver)
+    wfObserver->notify(electron_move, e); //Spin changed, notify WF
+
+}
+
+void Molecular_sample::getElectronSpin(const int e, doublevar & s) {
+
+    s = elecspin(e); 
 
 }
 

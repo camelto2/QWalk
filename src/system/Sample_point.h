@@ -273,6 +273,7 @@ private:
   Array2 <doublevar> iondist_temp;
   Array2 <doublevar> pointdist_temp;
   Array1 <doublevar> pos_temp;
+  doublevar spin_temp;
 };
 
 
