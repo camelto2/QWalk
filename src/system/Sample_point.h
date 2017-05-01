@@ -242,6 +242,17 @@ public:
   virtual void saveUpdate(int e, Sample_storage *)=0;
   virtual void restoreUpdate(int e, Sample_storage *)=0;
 
+  //CM:
+  //Dynamic Spin Functions
+  virtual void getElectronSpin(const int & e, const doublevar & s) = 0;
+  virtual void setElectronSpin(const int & e, const doublevar & s) = 0
+  virtual void translateSpin(const int e, const Array1 <doublevar> & trans) {
+    Array1 s;
+    getElectronSpin(e,s);
+    s += trans;
+    setElectronSpin(e,s);
+  }
+
 protected:
   Wavefunction * wfObserver;
 };

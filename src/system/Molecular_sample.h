@@ -141,6 +141,19 @@ public:
   void saveUpdate(int, Sample_storage * );
   void restoreUpdate(int, Sample_storage *);
 
+  //CM:
+  void getElectronSpin(const int & e, const doublevar & s) {
+    error("getElectronSpin not implemented for Molecular sample");
+  }
+
+  void setElectronSpin(const int & e, const doublevar & s) {
+    error("setElectronSpin not implemented for Molecular sample");
+  }
+
+  void translateSpin(const int & e, const doublevar & trans)  {
+    error("translateSpin not implemented for Molecular sample");
+  }
+
 private:
 
   int nelectrons;

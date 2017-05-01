@@ -126,6 +126,20 @@ public:
   void saveUpdate(int, Sample_storage * );
   void restoreUpdate(int, Sample_storage *);
 
+  //CM:
+  //Dynamic Spin functions below
+  void getElectronSpin(const int & e, const doubelvar & s) {
+    error("getElectronSpin not implented for Ring sample");
+  }
+
+  void setElectronSpin(const int & e, const doublevar & s) {
+    error("setElectronSpin not implemented for Ring sample");
+  }
+
+  void translateSpin(const int & e, const doublevar & trans) {
+    error("translateSpin not implemented for Ring sample");
+  }
+
 private:
 
   int nelectrons;

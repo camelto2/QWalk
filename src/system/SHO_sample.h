@@ -125,6 +125,20 @@ public:
   void saveUpdate(int, Sample_storage * );
   void restoreUpdate(int, Sample_storage *);
 
+  //CM:
+  //Dynamic Spin functions below
+  void getElectronSpin(const int & e, const doublevar & s) {
+    error("getElectronSpin not implemented for SHO sample");
+  }
+
+  void setElectronSpin(const int & e, const doublevar & s) {
+    error("setElectronSpin not implemented for SHO sample");
+  }
+
+  void translateSpin(const int & e, const doublevar & trans) {
+    error("translateSpin not implemented for SHO sample");
+  }
+
 private:
 
   int nelectrons;

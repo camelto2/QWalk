@@ -161,6 +161,21 @@ public:
    */
   doublevar overallSign() { return overall_sign; }
   doublevar overallPhase() { return overall_phase; }
+
+  //CM: 
+  //Dynamic Spin functions below
+  void getElectronSpin(const int & e, const doublevar & s) {
+    error("getElectronSpin not implemented for HEG sample");
+  }
+  
+  void setElectronSpin(const int & e, const doublevar & s) {
+    error("setElectronSpin not implemented for HEG sample");
+  }
+
+  void translateElectron(const int & e, const doublevar & trans) {
+    error("translateElectron not implemtned for HEG sample");
+  }
+
 private:
 
   int nelectrons;

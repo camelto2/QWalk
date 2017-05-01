@@ -162,6 +162,21 @@ public:
    */
   doublevar overallSign() { return overall_sign; }
   doublevar overallPhase() { return overall_phase; }
+
+  //CM:
+  //Dynamic Spin functions below
+  void getElectronSpin(const int & e, const doublevar & s) {
+    error("getElectronSpin not implemented for PBC sample");
+  }
+
+  void setElectronSpin(const int & e, const doublevar & s) {
+    error("setElectronSpin not implemented for PBC sample");
+  }
+
+  void translateSpin(const int & e, const doublevar & trans) {
+    error("translateSpin not implemented for PBC sample");
+  }
+
 private:
 
 
