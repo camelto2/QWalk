@@ -19,8 +19,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 
-#ifndef MOLECULAR_SAMPLE_H_INCLUDED
-#define MOLECULAR_SAMPLE_H_INCLUDED
+#ifndef MOLECULAR_SAMPLE_DYNSPIN_H_INCLUDED
+#define MOLECULAR_SAMPLE_DYNSPIN_H_INCLUDED
 
 
 #include "Sample_point.h"
@@ -29,11 +29,11 @@ class Wavefunction;
 class Sample_storage;
 
 
-class Molecular_sample : public Sample_point
+class Molecular_sample_dynspin : public Sample_point
 {
 public:
 
-  ~Molecular_sample()
+  ~Molecular_sample_dynspin()
   {}
 
 
@@ -168,5 +168,5 @@ private:
 
 
 
-#endif //MOLECULAR_SAMPLE_H_INCLUDED
+#endif //MOLECULAR_SAMPLE_DYNSPIN_H_INCLUDED
 //-------------------------------------------------------------------------

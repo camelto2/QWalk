@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "Wavefunction.h"
 #include "Sample_point.h"
 #include "Molecular_sample.h"
+#include "Molecular_sample_dynspin.h"
 #include "qmc_io.h"
 
 void Molecular_system::notify(change_type change, int n)

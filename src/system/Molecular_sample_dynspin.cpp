@@ -18,14 +18,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
  
 */
 
-#include "Molecular_sample.h"
+#include "Molecular_sample_dynspin.h"
 #include "ulec.h"
 #include "Wavefunction.h"
 
 
 
 
-void Molecular_sample::generateStorage(Sample_storage * & store)
+void Molecular_sample_dynspin::generateStorage(Sample_storage * & store)
 {
   int nions=parent->ions.size();
   store=new Sample_storage;
@@ -34,7 +34,7 @@ void Molecular_sample::generateStorage(Sample_storage * & store)
   store->pos_temp.Resize(3);
 }
 
-void Molecular_sample::saveUpdate(int e, Sample_storage * store) {
+void Molecular_sample_dynspin::saveUpdate(int e, Sample_storage * store) {
   //cout << "saveUpdate" << endl;
   getElectronPos(e, store->pos_temp);
   int nions=parent->ions.size();
@@ -57,7 +57,7 @@ void Molecular_sample::saveUpdate(int e, Sample_storage * store) {
   getElectronSpin(e,store->spin_temp);
 }
 
-void Molecular_sample::restoreUpdate(int e, Sample_storage * store)
+void Molecular_sample_dynspin::restoreUpdate(int e, Sample_storage * store)
 {
   //cout << "restoreUpdate" << endl;
   for(int i=0; i<3; i++)
@@ -87,7 +87,7 @@ void Molecular_sample::restoreUpdate(int e, Sample_storage * store)
 
 
 
-void Molecular_sample::updateEIDist()
+void Molecular_sample_dynspin::updateEIDist()
 {
   //cout << "updateEIDist" << endl;
   for(int e=0; e< nelectrons; e++)
@@ -123,7 +123,7 @@ void Molecular_sample::updateEIDist()
 /*!
 
  */
-void Molecular_sample::updateEEDist()
+void Molecular_sample_dynspin::updateEEDist()
 {
   //cout << "elecelecDistupdate" << endl;
   for(int e=0; e< nelectrons; e++)
@@ -174,7 +174,7 @@ void Molecular_sample::updateEEDist()
 }
 
 
-void Molecular_sample::init(System * sys) {
+void Molecular_sample_dynspin::init(System * sys) {
   assert(sys != NULL);
   recast(sys, parent); //assign sys to parent
 
@@ -197,7 +197,7 @@ void Molecular_sample::init(System * sys) {
 
 
 
-void Molecular_sample::randomGuess()
+void Molecular_sample_dynspin::randomGuess()
 {
   //cout << "randomGuess " << endl;
   //here we set range equal to 3.0 or the value given in the System section
@@ -274,7 +274,7 @@ void Molecular_sample::randomGuess()
 
 
 
-void Molecular_sample::setElectronPos(const int e,
+void Molecular_sample_dynspin::setElectronPos(const int e,
                                     const Array1 <doublevar> & position)
 {
   //cout << "setElectronPos" << endl;
@@ -298,7 +298,7 @@ void Molecular_sample::setElectronPos(const int e,
 }
 
 
-void Molecular_sample::setElectronPosNoNotify(const int e, 
+void Molecular_sample_dynspin::setElectronPosNoNotify(const int e, 
                                     const Array1 <doublevar> & position) {
   assert( position.GetDim(0) == 3 );
   Array1 <doublevar> temp(position.GetDim(0));
@@ -315,7 +315,7 @@ void Molecular_sample::setElectronPosNoNotify(const int e,
   elecDistStale(e)=1;
 }
 
-void Molecular_sample::getElectronPos(const int e, Array1 <doublevar> & R){
+void Molecular_sample_dynspin::getElectronPos(const int e, Array1 <doublevar> & R){
     
     assert( R.GetDim(0) >= 3 );
     
@@ -326,7 +326,7 @@ void Molecular_sample::getElectronPos(const int e, Array1 <doublevar> & R){
   }
 
 
-void Molecular_sample::moveIon(const int ion, const Array1 <doublevar> & r)
+void Molecular_sample_dynspin::moveIon(const int ion, const Array1 <doublevar> & r)
 {
   assert(r.GetDim(0) >=3);
   Array1 <doublevar> temp(r.GetDim(0));
@@ -352,9 +352,9 @@ void Molecular_sample::moveIon(const int ion, const Array1 <doublevar> & r)
 
 #include <iomanip>
 
-void Molecular_sample::rawOutput(ostream & os)
+void Molecular_sample_dynspin::rawOutput(ostream & os)
 {
-  os << "Molecular_sample\n";
+  os << "Molecular_sample_dynspin\n";
   os << "numIons  " << iondist.GetDim(1) << endl;
   for(int i=0; i< parent->ions.size(); i++)
   {
@@ -374,13 +374,13 @@ void Molecular_sample::rawOutput(ostream & os)
 }
 
 
-void Molecular_sample::rawInput(istream & is)
+void Molecular_sample_dynspin::rawInput(istream & is)
 {
   string text;
   int nions;
   is >> text;
-  if(text != "Molecular_sample")
-    error("expected Molecular_sample, got ", text);
+  if(text != "Molecular_sample_dynspin")
+    error("expected Molecular_sample_dynspin, got ", text);
 
   is >> text;
   if(text != "numIons")
@@ -441,7 +441,7 @@ void Molecular_sample::rawInput(istream & is)
 
 }
 
-void Molecular_sample::setElectronSpin(const int e, const doublevar & s) {
+void Molecular_sample_dynspin::setElectronSpin(const int e, const doublevar & s) {
 
   elecspin(e) = s;
 
@@ -450,7 +450,7 @@ void Molecular_sample::setElectronSpin(const int e, const doublevar & s) {
 
 }
 
-void Molecular_sample::getElectronSpin(const int e, doublevar & s) {
+void Molecular_sample_dynspin::getElectronSpin(const int e, doublevar & s) {
 
     s = elecspin(e); 
 
