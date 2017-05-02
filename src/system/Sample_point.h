@@ -252,6 +252,7 @@ public:
     s += trans;
     setElectronSpin(e,s);
   }
+  bool dynspin;
 
 protected:
   Wavefunction * wfObserver;
@@ -275,6 +276,7 @@ private:
   Array2 <doublevar> iondist_temp;
   Array2 <doublevar> pointdist_temp;
   Array1 <doublevar> pos_temp;
+  //CM:
   doublevar spin_temp;
 };
 
@@ -300,6 +302,10 @@ class Config_save_point {
   void getPos(int e, Array1 <doublevar> & r) { 
     r=electronpos(e);
   }
+  //CM:
+  void getSpin(int e, doublevar & s) {
+    s=electronspin(e);
+  }
   void read(istream & is);
   void write(ostream & os);
 
@@ -310,6 +316,10 @@ class Config_save_point {
 
  private:
   Array1 <Array1 <doublevar> > electronpos;
+  //CM:
+  bool dynspin;
+  Array1 <doublevar> electronspin;
+  
 };
 #endif
 //-------------------------------------------------------------------------

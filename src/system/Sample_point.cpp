@@ -74,7 +74,16 @@ void Config_save_point::savePos(Sample_point * sample) {
   for(int i=0; i< nelectrons; i++) {
     sample->getElectronPos(i,electronpos(i));
   }
-  
+
+  //CM:
+  dynspin = sample->dynspin;
+  if(dynspin) {
+    if(electronspin.GetDim(0)!=nelectrons) {
+      electronspin.Resize(nelectrons);
+      for (int i = 0; i < nelectrons; i++) 
+	sample->getElectronSpin(i,electronspin(i));
+    }
+  }
 }
 
 void Config_save_point::restorePos(Sample_point * sample) {
@@ -82,6 +91,13 @@ void Config_save_point::restorePos(Sample_point * sample) {
   assert(nelectrons==electronpos.GetDim(0));
   for(int i=0; i< nelectrons; i++) 
     sample->setElectronPos(i,electronpos(i));
+  //CM:
+  dynspin = sample->dynspin;
+  if (dynspin) {
+    assert(nelectrons==electronspin.GetDim(0));
+    for (int i=0; i < nelectrons; i++)
+      sample->setElectronSpin(i,electronspin(i));
+  }
 }
 
 void Config_save_point::mpiReceive(int node) {
@@ -100,6 +116,16 @@ void Config_save_point::mpiReceive(int node) {
    // MPI_Recv(electronpos(e).v, 3, MPI_DOUBLE,
    //     node, 0, MPI_Comm_grp, &status);
   }
+
+  //CM:
+  if (dynspin) {
+      electronspin.Resize(nelectrons);
+      Array1 <doublevar> espin(nelectrons);
+      MPI_Recv(espin.v,nelectrons,MPI_DOUBLE,node,0,MPI_Comm_grp,&status);
+      for (int e = 0; e < nelectrons; e++) {
+	  electronspin(e) = espin(e);
+      }
+  }
 #endif
 }
 
@@ -113,6 +139,15 @@ void Config_save_point::mpiSend(int node) {
   }
   MPI_Send(epos.v, 3*nelectrons, MPI_DOUBLE,
         node, 0, MPI_Comm_grp);
+
+  //CM:
+  if (dynspin) {
+    Array1 <doublevar> espin(nelectrons);
+    for (int e = 0; e < nelectrons; e++) 
+      espin(e) = electronspin(e);
+    MPI_Send(espin.v, nelectrons, MPI_DOUBLE, node, 0, MPI_Comm_grp);
+  }
+
 #endif
 }
 
@@ -130,19 +165,34 @@ void Config_save_point::read(istream & is) {
   assert(dummy=="ndim");
   int ndim;
   is >> ndim;
+  //CM:
+  if (ndim == 4) {
+    dynspin = true;
+    electronspin.Resize(nelec);
+  }
   for(int e=0; e< nelec; e++) { 
     electronpos(e).Resize(ndim);
     for(int d=0; d< 3; d++) { 
       is >> electronpos(e)(d);
     }
+    //CM:
+    if (dynspin) is >> electronspin(e);
   }
 }
 void Config_save_point::write(ostream & os) { 
-  os << "nElec " << electronpos.GetDim(0) << " ndim " << 3 << endl;
+  //CM:
+  //os << "nElec " << electronpos.GetDim(0) << " ndim " << 3 << endl;
+  if (!dynspin)
+    os << "nElec " << electronpos.GetDim(0) << " ndim " << 3 << endl;
+  else
+    os << "nElec " << electronpos.GetDim(0) << " ndim " << 4 << endl;
   for(int e=0; e< electronpos.GetDim(0); e++) { 
     for(int d=0; d< 3; d++) { 
       os << electronpos(e)(d) << " ";
     }
+    //CM:
+    if (dynspin)
+      os << electronspin(e);
     os << endl;
   }
 }
