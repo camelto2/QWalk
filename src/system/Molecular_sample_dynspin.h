@@ -141,6 +141,11 @@ public:
   void saveUpdate(int, Sample_storage * );
   void restoreUpdate(int, Sample_storage *);
 
+  //CM:
+  void getElectronSpin(const int e, doublevar & s);
+
+  void setElectronSpin(const int e, const doublevar & s);
+
 private:
 
   int nelectrons;
@@ -154,6 +159,10 @@ private:
                                  //the lower is currently wasted
 
   Molecular_system * parent;
+
+  //CM: 
+  //Dynamic Spin variable
+  Array1 <doublevar> elecspin;
 
 };
 

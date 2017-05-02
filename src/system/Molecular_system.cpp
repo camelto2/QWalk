@@ -39,7 +39,12 @@ void Molecular_system::notify(change_type change, int n)
 int Molecular_system::generateSample(Sample_point *& samptr)
 {
   assert(samptr==NULL);
-  samptr=new Molecular_sample;
+  //CM:
+  //samptr=new Molecular_sample;
+  if(!dynspin)
+    samptr=new Molecular_sample;
+  else
+    samptr=new Molecular_sample_dynspin;
   samptr->init(this);
   return 1;
 }
@@ -53,6 +58,8 @@ int Molecular_system::showinfo(ostream & os)
 int Molecular_system::read(vector <string> & words,
                            unsigned int & pos)
 {
+  //CM:
+  dynspin = false;
   nspin.Resize(2);
   unsigned int startpos=pos;
   vector <string> spintxt;
@@ -61,6 +68,11 @@ int Molecular_system::read(vector <string> & words,
   }
   nspin(0)=atoi(spintxt[0].c_str());
   nspin(1)=atoi(spintxt[1].c_str());
+
+  //CM:
+  string dynspintxt;
+  if(readvalue(words, pos=0, dynspintxt, "DYNSPIN"))
+    dynspin = true;
 
   //restrcit initial walkers to a given range
   vector <string> inirangetxt;

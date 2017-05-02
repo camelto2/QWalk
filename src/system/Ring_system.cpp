@@ -52,6 +52,8 @@ int Ring_system::showinfo(ostream & os) {
 
 int Ring_system::read(vector <string> & words,
                            unsigned int & pos){
+  //CM:
+  dynspin = false;
   nspin.Resize(2);
   vector <string> spintxt;
   if(!readsection(words, pos=0, spintxt, "NSPIN")) {

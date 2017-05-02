@@ -155,6 +155,10 @@ public:
 
   virtual void makeCopy(System *& ptr)=0;
 
+  //CM:
+  //Dynamic spin flag
+  bool dynspin;
+
 };
 
 int allocate(vector <string> &, System * &);
