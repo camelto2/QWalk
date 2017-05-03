@@ -325,6 +325,137 @@ int allocate(vector <string> & words, Dynamics_generator *& sam);
 void limDrift(Array1 <doublevar> & drift, doublevar tau, drift_type dtype);
 
 
+//CM:
+struct spinPoint {
+  Array1 <doublevar> drift; //!< total drift(deterministic move)
+  Array1 <doublevar> pos;
+  doublevar spin;
+  doublevar spindrift;
+  doublevar sign; //!< sign from the sample_point
+  Wf_return lap;
+  Wf_return spinlap;
+  Array1 <doublevar> gauss; //!< gaussian part that generated this move
+  doublevar spingauss;
+  Array1 <doublevar> translation; //!< total translation of the move
+  doublevar spintrans;
+
+  spinPoint() {
+    drift.Resize(3);
+    pos.Resize(3);
+    gauss.Resize(3);
+    translation.Resize(3);
+    translation=0;
+    spintrans = 0;
+    gauss=0;
+    spingauss = 0;
+    pos=0; drift=0;
+    spin = 0;
+    spindrift = 0;
+  }
+};
+
+class DynSpin_sampler:public Dynamics_generator {
+ public:
+
+  DynSpin_sampler() {
+    divide_=1.0;
+    recursion_depth_=1;
+    restrict_nodes=0;
+    dtype=drift_cyrus;
+    //drift_2pt=0;
+
+    acceptances.Resize(recursion_depth_);
+    tries.Resize(recursion_depth_);
+    acceptances=0;
+    tries=0;
+    spintau=0.001;
+  }
+
+  void read(vector <string> & words);
+
+  void setDriftType(drift_type dtype_) {
+    dtype=dtype_;
+  }
+  
+  int showinfo(string & indent, ostream & os) {
+    os << indent << "recursion depth " << recursion_depth_ << endl;
+    os << indent << "timestep divider " << divide_ << endl;
+    if(restrict_nodes) os << indent << "restricting node crossings" << endl;
+    os << indent << "drift type " << dtype << endl;
+    os << indent << "spin timestep " << spintau << endl;
+    return 1;
+  }
+
+  void setDivider(doublevar divide) {
+    divide_=divide;
+  }
+
+  void setRecursionDepth(int depth) {
+    recursion_depth_=depth;
+    acceptances.Resize(recursion_depth_);
+    tries.Resize(recursion_depth_);
+    acceptances=0;
+    tries=0;
+  }
+
+  int getRecursionDepth() {
+    return recursion_depth_;
+  }
+
+  /*!
+    Returns the step that was accepted, or 0 if 
+    there was a rejection.
+  */
+  int sample(int e,
+             Sample_point * sample, 
+             Wavefunction * wf, 
+             Wavefunction_data * wfdata, 
+             Guiding_function * guidewf,
+             Dynamics_info & info,
+             doublevar & efftimestep
+             );
+  int dynspin_driver(int e,
+                   Sample_point * sample,
+                   Wavefunction * wf, 
+                   Wavefunction_data * wfdata,
+                   Guiding_function * guidewf,
+                   int depth,
+                   Dynamics_info & info,
+                   doublevar & efftimestep);
+
+  //virtual doublevar greenFunction(Sample_point * sample, Wavefunction * wf,
+  //                   Wavefunction_data * wfdata, Guiding_function * guidewf,
+  //                           int e,
+  //                           Array1 <doublevar> & newpos, doublevar timestep,
+  //                           Dynamics_info & info);
+
+  doublevar get_acceptance(Guiding_function * guidingwf, int x, int y);
+  
+  void showStats(ostream & os);
+  void resetStats();
+ private:
+ 
+  doublevar transition_prob(int point1, int point2,
+                            doublevar timestep, 
+			    doublevar spintimestep,
+                            drift_type dtype);
+  
+  drift_type dtype;
+  Array1 <spinPoint> trace;
+  Array1 <doublevar> timesteps;
+  Array1 <doublevar> spintimesteps;
+  int recursion_depth_;
+  doublevar divide_;
+  
+  Array1 <doublevar> acceptances;
+  Array1 <long int > tries;
+
+  string indent; //for debugging..
+  Storage_container wfStore;
+  doublevar spintau;
+};
+
+
 #endif //SPLIT_SAMPLE_H_INCLUDED
 
 //----------------------------------------------------------------------
