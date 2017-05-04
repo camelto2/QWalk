@@ -1386,7 +1386,7 @@ int DynSpin_sampler::sample(int e,
     wfStore.initialize(sample, wf);
   
   wf->updateLap(wfdata, sample);
-  wf->updateSpinGrad(wfdata, sample);
+  wf->updateSpinLap(wfdata, sample);
   wfStore.saveUpdate(sample, wf, e);
   trace.Resize(recursion_depth_+1);
 
