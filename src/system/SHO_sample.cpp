@@ -83,6 +83,8 @@ void SHO_sample::init(System * sys) {
   nd=parent->ndim();
 
   nelectrons=parent->nelectrons(0)+parent->nelectrons(1);
+  //CM:
+  dynspin = false;
 
   elecpos.Resize(nelectrons, 3);
   elecpos=0.0;

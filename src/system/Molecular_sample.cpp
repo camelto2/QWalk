@@ -187,6 +187,8 @@ void Molecular_sample::init(System * sys) {
   ionDistStale.Resize(nelectrons);
   elecDistStale=1;
   ionDistStale=1;
+  //CM:
+  dynspin = false
 }
 
 

@@ -164,6 +164,7 @@ public:
 
   //CM: 
   //Dynamic Spin functions below
+  dynspin = false;
   void getElectronSpin(const int e, doublevar & s) {
     error("getElectronSpin not implemented for HEG sample");
   }

@@ -180,6 +180,8 @@ void Molecular_sample_dynspin::init(System * sys) {
 
   int nions=parent->ions.size();
   nelectrons=parent->nelectrons(0)+parent->nelectrons(1);
+  //CM:
+  dynspin = true;
 
   elecpos.Resize(nelectrons, 3);
   elecpos=0.0;

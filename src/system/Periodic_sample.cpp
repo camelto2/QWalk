@@ -182,6 +182,8 @@ void Periodic_sample::init(System * sys) {
 
   int nions=parent->ions.size();
   nelectrons=parent->nelectrons(0)+parent->nelectrons(1);
+  //CM:
+  dynspin = false;
 
   elecpos.Resize(nelectrons, 3);
   iondist.Resize(nions,nelectrons,5);
