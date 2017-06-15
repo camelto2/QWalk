@@ -173,9 +173,6 @@ public:
     error("setElectronSpin not implemented for PBC sample");
   }
 
-  void translateSpin(const int e, const doublevar & trans) {
-    error("translateSpin not implemented for PBC sample");
-  }
 
 private:
 

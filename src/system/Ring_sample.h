@@ -136,10 +136,6 @@ public:
     error("setElectronSpin not implemented for Ring sample");
   }
 
-  void translateSpin(const int e, const doublevar & trans) {
-    error("translateSpin not implemented for Ring sample");
-  }
-
 private:
 
   int nelectrons;

@@ -224,8 +224,6 @@ void HEG_sample::init(System * sys) {
   recast(sys, parent); //assign sys to parent
 
   nelectrons=parent->nelectrons(0)+parent->nelectrons(1);
-  //CM:
-  dynspin = false;
 
   elecpos.Resize(nelectrons, 3);
   pointdist.Resize(nelectrons, nelectrons,5);

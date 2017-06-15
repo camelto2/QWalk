@@ -98,8 +98,6 @@ public:
 
 private:
   friend class Molecular_sample;
-  //CM:
-  friend class Molecular_sample_dynspin;
   Particle_set ions;
   Array1 <int> nspin;
 

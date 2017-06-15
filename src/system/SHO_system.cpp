@@ -52,8 +52,6 @@ int SHO_system::showinfo(ostream & os) {
 int SHO_system::read(vector <string> & words,
                            unsigned int & pos){
 
-  //CM:
-  dynspin = false;
   pos=0;
   vector <string> omegatxt;
   if(!readsection(words, pos=0, omegatxt, "OMEGA")) 

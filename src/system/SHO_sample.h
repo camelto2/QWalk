@@ -135,10 +135,6 @@ public:
     error("setElectronSpin not implemented for SHO sample");
   }
 
-  void translateSpin(const int e, const doublevar & trans) {
-    error("translateSpin not implemented for SHO sample");
-  }
-
 private:
 
   int nelectrons;

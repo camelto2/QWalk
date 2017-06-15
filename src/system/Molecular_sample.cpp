@@ -187,8 +187,6 @@ void Molecular_sample::init(System * sys) {
   ionDistStale.Resize(nelectrons);
   elecDistStale=1;
   ionDistStale=1;
-  //CM:
-  dynspin = false
 }
 
 
@@ -429,5 +427,22 @@ void Molecular_sample::rawInput(istream & is)
 
 
 }
+
+void Molecular_sample::setElectronSpin(const int e, const doublevar & s) {
+
+  elecspin(e) = s;
+
+  if(wfObserver)
+    wfObserver->notify(electron_move, e); //Spin changed, notify WF
+
+}
+
+void Molecular_sample::getElectronSpin(const int e, doublevar & s) {
+
+    s = elecspin(e); 
+
+}
+
+//-------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------
