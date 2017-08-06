@@ -246,13 +246,6 @@ public:
   //Dynamic Spin Functions
   virtual void getElectronSpin(const int e, doublevar & s) = 0;
   virtual void setElectronSpin(const int e, const doublevar & s) = 0;
-  virtual void translateSpin(const int e, const doublevar & trans) {
-    doublevar s;
-    getElectronSpin(e,s);
-    s += trans;
-    setElectronSpin(e,s);
-  }
-  bool dynspin;
 
 protected:
   Wavefunction * wfObserver;

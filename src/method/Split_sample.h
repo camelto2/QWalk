@@ -35,6 +35,13 @@ struct Point {
   Array1 <doublevar> gauss; //!< gaussian part that generated this move
   Array1 <doublevar> translation; //!< total translation of the move
 
+  //CM
+  doublevar spin;
+  doublevar spin_drift;
+  doublevar spin_gauss;
+  doublevar spin_translation;
+  Wf_return spinlap;
+
   Point() {
     drift.Resize(3);
     pos.Resize(3);
@@ -43,6 +50,11 @@ struct Point {
     translation=0;
     gauss=0;
     pos=0; drift=0;
+    //CM
+    spin=0;
+    spin_drift=0;
+    spin_gauss=0;
+    spin_translation=0;
   }
 };
 
@@ -60,6 +72,14 @@ struct Dynamics_info {
   int accepted;
   //Array2 <doublevar> newlap;
   doublevar diffusion_rate;
+  
+  //CM
+  doublevar orig_spin;
+  doublevar spin_gauss;
+  doublevar new_spin;
+  doublevar spin_diffuse_start;
+  doublevar spin_diffuse_end;
+  doublevar spin_diffusion_rate;
   
   doublevar symm_gf; //!< ratio versus symmetrized green's function
   doublevar resample_gf; //!< green's function that we want to resample
@@ -324,40 +344,11 @@ class SRK_dmc:public Dynamics_generator {
 int allocate(vector <string> & words, Dynamics_generator *& sam);
 void limDrift(Array1 <doublevar> & drift, doublevar tau, drift_type dtype);
 
-
-//CM:
-struct spinPoint {
-  Array1 <doublevar> drift; //!< total drift(deterministic move)
-  Array1 <doublevar> pos;
-  doublevar spin;
-  doublevar spindrift;
-  doublevar sign; //!< sign from the sample_point
-  Wf_return lap;
-  Wf_return spinlap;
-  Array1 <doublevar> gauss; //!< gaussian part that generated this move
-  doublevar spingauss;
-  Array1 <doublevar> translation; //!< total translation of the move
-  doublevar spintrans;
-
-  spinPoint() {
-    drift.Resize(3);
-    pos.Resize(3);
-    gauss.Resize(3);
-    translation.Resize(3);
-    translation=0;
-    spintrans = 0;
-    gauss=0;
-    spingauss = 0;
-    pos=0; drift=0;
-    spin = 0;
-    spindrift = 0;
-  }
-};
-
-class DynSpin_sampler:public Dynamics_generator {
+//CM
+class Dynspin_sampler:public Dynamics_generator {
  public:
 
-  DynSpin_sampler() {
+  Dynspin_sampler() {
     divide_=1.0;
     recursion_depth_=1;
     restrict_nodes=0;
@@ -368,7 +359,7 @@ class DynSpin_sampler:public Dynamics_generator {
     tries.Resize(recursion_depth_);
     acceptances=0;
     tries=0;
-    spintau=0.001;
+    spin_mass = 1.0;
   }
 
   void read(vector <string> & words);
@@ -382,7 +373,6 @@ class DynSpin_sampler:public Dynamics_generator {
     os << indent << "timestep divider " << divide_ << endl;
     if(restrict_nodes) os << indent << "restricting node crossings" << endl;
     os << indent << "drift type " << dtype << endl;
-    os << indent << "spin timestep " << spintau << endl;
     return 1;
   }
 
@@ -414,7 +404,7 @@ class DynSpin_sampler:public Dynamics_generator {
              Dynamics_info & info,
              doublevar & efftimestep
              );
-  int dynspin_driver(int e,
+  int split_driver(int e,
                    Sample_point * sample,
                    Wavefunction * wf, 
                    Wavefunction_data * wfdata,
@@ -423,6 +413,8 @@ class DynSpin_sampler:public Dynamics_generator {
                    Dynamics_info & info,
                    doublevar & efftimestep);
 
+
+
   //virtual doublevar greenFunction(Sample_point * sample, Wavefunction * wf,
   //                   Wavefunction_data * wfdata, Guiding_function * guidewf,
   //                           int e,
@@ -430,6 +422,10 @@ class DynSpin_sampler:public Dynamics_generator {
   //                           Dynamics_info & info);
 
   doublevar get_acceptance(Guiding_function * guidingwf, int x, int y);
+
+  doublevar linear_symm(Point & p1, Point & p2,
+	                doublevar timestep, drift_type dtype,
+			int ndim=3);
   
   void showStats(ostream & os);
   void resetStats();
@@ -437,13 +433,11 @@ class DynSpin_sampler:public Dynamics_generator {
  
   doublevar transition_prob(int point1, int point2,
                             doublevar timestep, 
-			    doublevar spintimestep,
                             drift_type dtype);
   
   drift_type dtype;
-  Array1 <spinPoint> trace;
+  Array1 <Point> trace;
   Array1 <doublevar> timesteps;
-  Array1 <doublevar> spintimesteps;
   int recursion_depth_;
   doublevar divide_;
   
@@ -452,8 +446,12 @@ class DynSpin_sampler:public Dynamics_generator {
 
   string indent; //for debugging..
   Storage_container wfStore;
-  doublevar spintau;
+
+  //CM:
+  doublevar spin_mass;
 };
+
+
 
 
 #endif //SPLIT_SAMPLE_H_INCLUDED

@@ -30,7 +30,7 @@ int allocate(vector <string> & words, Dynamics_generator *& sam) {
     sam=new UNR_sampler;
   //CM:
   else if (caseless_eq(words[0],"DYNSPIN"))
-    sam=new DynSpin_sampler;
+    sam=new Dynspin_sampler;
   else 
     error("unknown type of sampler: ", words[0]);
 
@@ -1127,10 +1127,38 @@ int SRK_dmc::sample(int e,
   return 1;
 }
 
-//----------------------------------------------------------------------
-//CM:
 
-void DynSpin_sampler::read(vector <string> & words) {
+//CM
+doublevar Dynspin_sampler::transition_prob(int point1, int point2,
+                                         doublevar timestep, 
+                                         drift_type dtype) {
+  doublevar prob=0;
+  static Array1 <doublevar> drift(3);
+  //cout << "transition probability" << endl;
+
+  drift=trace(point1).drift;
+
+  limDrift(drift, timestep, dtype);
+
+  for(int d=0; d< 3; d++) {
+    
+    prob-=(trace(point2).pos(d)-trace(point1).pos(d)-drift(d))
+      *(trace(point2).pos(d)-trace(point1).pos(d)-drift(d));
+  }
+  prob/=(2.0*timestep);
+
+  //CM
+  //for the moment I am not worrying about limiting the spin drift
+  //can easily be done later
+  
+  prob-=(trace(point2).spin-trace(point1).spin-trace(point1).spin_drift)
+       *(trace(point2).spin-trace(point1).spin-trace(point1).spin_drift)
+       /(2.0*timestep/spin_mass);
+  
+  return prob;
+}
+
+void Dynspin_sampler::read(vector <string> & words) {
   unsigned int pos=0;
 
   readvalue(words, pos=0, divide_, "DIVIDER");
@@ -1150,39 +1178,12 @@ void DynSpin_sampler::read(vector <string> & words) {
     else error("Didn't understand DRIFT_TYPE ", drifttype);
   }
 
-  string spintstep;
-  if(readvalue(words, pos=0, spintstep, "SPINTIMESTEP"))
-      spintau=atof(spintstep.c_str());
-  
+  if(!readvalue(words, pos=0, spin_mass, "SPIN_MASS")) 
+      error("Need to set SPIN_MASS");
+
 }
 
-
-doublevar DynSpin_sampler::transition_prob(int point1, int point2,
-                                         doublevar timestep,
-					 doublevar spintimestep,
-                                         drift_type dtype) {
-  doublevar prob=0;
-  static Array1 <doublevar> drift(3);
-  static Array1 <doublevar> spindrift(1);
-
-  drift=trace(point1).drift;
-  spindrift(0)=trace(point1).spindrift;
-
-  limDrift(drift, timestep, dtype);
-  limDrift(spindrift, spintimestep, dtype);
-
-  for(int d=0; d< 3; d++) {
-    
-    prob-=(trace(point2).pos(d)-trace(point1).pos(d)-drift(d))
-      *(trace(point2).pos(d)-trace(point1).pos(d)-drift(d));
-  }
-  prob/=(2.0*timestep);
-  
-  prob += -(trace(point2).spin-trace(point1).spin-spindrift(0))*(trace(point2).spin-trace(point1).spin-spindrift(0))/(2.0*spintimestep);
-  return prob;
-}
-
-doublevar DynSpin_sampler::get_acceptance(Guiding_function * guidingwf, 
+doublevar Dynspin_sampler::get_acceptance(Guiding_function * guidingwf, 
                                         int x, int y) {
   //indent = indent + "  ";
 
@@ -1211,8 +1212,8 @@ doublevar DynSpin_sampler::get_acceptance(Guiding_function * guidingwf,
     //     << " (timestep " << timesteps(dist)
     //     <<  endl;
 
-    doublevar num=transition_prob(y,y-dir*dist,timesteps(dist), spintimesteps(dist), dtype);
-    doublevar den=transition_prob(x,x+dir*dist,timesteps(dist), spintimesteps(dist), dtype);
+    doublevar num=transition_prob(y,y-dir*dist,timesteps(dist), dtype);
+    doublevar den=transition_prob(x,x+dir*dist,timesteps(dist), dtype);
     prob_transition+=num-den;
     //cout << indent <<  "num " << num << " den " << den << " num-den " << num-den << endl;
   }
@@ -1255,7 +1256,34 @@ doublevar DynSpin_sampler::get_acceptance(Guiding_function * guidingwf,
 
 }
 
-int DynSpin_sampler::dynspin_driver(int e,
+doublevar Dynspin_sampler::linear_symm(Point & p1, Point & p2,
+		      doublevar timestep, drift_type dtype,
+		      int ndim) {
+  Array1 <doublevar> dr1(3), dr2(3);
+  dr1=p1.drift; dr2=p2.drift;
+
+  limDrift(dr1, timestep, dtype);
+  limDrift(dr2, timestep, dtype);
+
+  doublevar green_forward=0;
+  for(int d=0; d< ndim; d++) {
+    
+    green_forward+=(p2.pos(d)-p1.pos(d))*(p2.pos(d)-p1.pos(d))
+      +(p2.pos(d)-p1.pos(d))*(dr2(d)-dr1(d))
+      +.5*(dr2(d)*dr2(d)+dr1(d)*dr1(d));
+
+  }
+  green_forward *= -0.5/timestep;
+
+  doublevar spin_tau = timestep/spin_mass;
+  green_forward-=((p2.spin-p1.spin)*(p2.spin-p1.spin)
+    +(p2.spin-p1.spin)*(p2.spin_drift-p1.spin_drift)
+    +.5*(p2.spin_drift*p2.spin_drift+p1.spin_drift*p1.spin_drift))/(2.0*spin_tau);
+
+  return green_forward;
+}
+
+int Dynspin_sampler::split_driver(int e,
                                 Sample_point * sample,
                                 Wavefunction * wf, 
                                 Wavefunction_data * wfdata,
@@ -1271,12 +1299,10 @@ int DynSpin_sampler::dynspin_driver(int e,
   if(depth > recursion_depth_) return 0;
 
   static Array1 <doublevar> c_olddrift(3);
-  static Array1 <doublevar> c_oldspindrift(1);
+  static Array1 <doublevar> c_newdrift(3);
   
   c_olddrift=trace(0).drift;  
   limDrift(c_olddrift, timesteps(depth), dtype);
-  c_oldspindrift(0) = trace(0).spindrift; //Storing as array to pass into limDrift, even though single variable
-  limDrift(c_oldspindrift, spintimesteps(depth), dtype);
 
   int ndim=sample->ndim();
 
@@ -1293,60 +1319,65 @@ int DynSpin_sampler::dynspin_driver(int e,
     
 
   }
-  trace(depth).spingauss = rng.gasdev();
-  trace(depth).spintrans = trace(depth).spingauss*sqrt(spintimesteps(depth))
-      + c_oldspindrift(0); 
-  trace(depth).spin=trace(0).spin+trace(depth).spintrans;
+  //CM:
+  //At the moment, not looking at limiting spin drift
+  //It can easily be done though
+  trace(depth).spin_gauss = rng.gasdev();
+  trace(depth).spin_translation=trace(depth).spin_gauss*sqrt(timesteps(depth)/spin_mass)
+      + trace(0).spin_drift;
+  trace(depth).spin = trace(0).spin + trace(depth).spin_translation;
+
 
   doublevar diffusion_rate=0;
   for(int d=0; d< ndim; d++) 
     diffusion_rate+=trace(depth).gauss(d)*timesteps(depth)*trace(depth).gauss(d);;
-  doublevar spindiffusion_rate=0;
-  spindiffusion_rate+=trace(depth).spingauss*spintimesteps(depth)*trace(depth).spingauss;
+  doublevar spin_diffusion_rate = trace(depth).spin_gauss*timesteps(depth)/spin_mass*trace(depth).spin_gauss;
   
   
   sample->translateElectron(e, trace(depth).translation);
-  sample->translateSpin(e, trace(depth).spintrans);
+  sample->setElectronSpin(e, trace(depth).spin);
   trace(depth).sign=sample->overallSign();
   
-  if(wfdata->supports(laplacian_update) ) {
+  if(wfdata->supports(laplacian_update) && wfdata->supports(spin_laplacian_update)) {
     wf->updateLap(wfdata, sample);
     wf->getLap(wfdata, e, trace(depth).lap);
     wf->updateSpinLap(wfdata, sample);
-    wf->getSpinLap(wfdata, e, trace(depth).spinlap);
+    wf->getSpinLap(wfdata, e, trace(depth).spinlap;
   }
   else {
-    //wf->updateForceBias(wfdata, sample);
-    //wf->getForceBias(wfdata, e, trace(depth).lap);
-    error("Must support laplacian update");
+    error("Must support laplacian_update for Dynspin_sample");
   }
   
   guidingwf->getLap(trace(depth).lap, trace(depth).drift);
-  guidingwf->getSpinLap(trace(depth).spinlap, trace(depth).spindrift);
+  guidingwf->getSpinLap(trace(depth).spinlap, trace(depth).spin_drift);
+  
 
   //indent="";
   //cout << "#######################acceptance for " << depth << endl;
   doublevar acc=get_acceptance(guidingwf, 0,depth);
   //cout << "acceptance for " << depth << " : " <<  acc << endl;    
 
-  //CM:
-  //Not adding info for new spin, spingauss, spindiffuse_start etc
-  //only need the acceptance ratio
-  info.green_forward=exp(transition_prob(0,depth,timesteps(depth),spintimesteps(depth),dtype));
+  info.green_forward=exp(transition_prob(0,depth,timesteps(depth), dtype));
   //cout << "green_forward " << info.green_forward << endl;
-  info.green_backward=exp(transition_prob(depth,0,timesteps(depth),spintimesteps(depth),dtype));
+  info.green_backward=exp(transition_prob(depth,0,timesteps(depth),dtype));
   info.diffusion_rate=diffusion_rate;
+  info.spin_diffusion_rate= = spin_diffusion_rate;
   info.acceptance=acc;
   info.orig_pos=trace(0).pos;
+  info.orig_spin=trace(0).spin;
   info.diffuse_start.Resize(3);
   for(int d=0; d< ndim; d++)
     info.diffuse_start(d)=trace(0).pos(d)+c_olddrift(d);
+  info.spin_diffuse_start = trace(0).spin+trace(0).spin_drift;
   info.diffuse_end=trace(depth).pos;
+  info.spin_diffuse_end = trace(depth).spin;
   info.new_pos=trace(depth).pos;
+  info.new_spin=trace(depth).spin;
   info.gauss=trace(depth).gauss;
+  info.spin_gauss = trace(depth).spin_gauss;
   
-  //info.symm_gf=exp(linear_symm(trace(0), trace(depth), timesteps(depth), dtype));
-  //info.resample_gf=info.symm_gf;
+  info.symm_gf=exp(linear_symm(trace(0), trace(depth), timesteps(depth), dtype));
+  info.resample_gf=info.symm_gf;
   //trying a better gf
   //info.green_forward*=info.acceptance;
   //--------
@@ -1362,48 +1393,46 @@ int DynSpin_sampler::dynspin_driver(int e,
     static Array1 <doublevar> rev(3,0.0);
     for(int d=0; d< 3; d++) rev(d)=-trace(depth).translation(d);
     sample->translateElectron(e,rev);
-    static doublevar spinrev = 0.0;
-    spinrev = -trace(depth).spintrans;
-    sample->translateSpin(e,spinrev);
+    sample->setElectronSpin(e,trace(0).spin);
 
     depth++;
     
-    return dynspin_driver(e,sample, wf, wfdata, guidingwf, 
+    return split_driver(e,sample, wf, wfdata, guidingwf, 
                         depth, info, efftimestep);
   }
   
 }
 
-int DynSpin_sampler::sample(int e,
-                    Sample_point * sample, 
-                    Wavefunction * wf, 
-                    Wavefunction_data * wfdata,
-                    Guiding_function * guidingwf,
-                    Dynamics_info & info,
-                    doublevar & efftimestep) {
+
+//----------------------------------------------------------------------
+
+int Dynspin_sampler::sample(int e,
+                          Sample_point * sample, 
+                          Wavefunction * wf, 
+                          Wavefunction_data * wfdata,
+                          Guiding_function * guidingwf,
+                          Dynamics_info & info,
+                          doublevar & efftimestep) {
 
   if(! wfStore.isInitialized())
     wfStore.initialize(sample, wf);
   
   wf->updateLap(wfdata, sample);
-  wf->updateSpinLap(wfdata, sample);
+  wf->updateSpinLap(wfdata,sample);
   wfStore.saveUpdate(sample, wf, e);
   trace.Resize(recursion_depth_+1);
 
   for(int i=0; i < recursion_depth_+1; i++) {
     trace(i).lap.Resize(wf->nfunc(), 5);
-    trace(i).spinlap.Resize(wf->nfunc(), 1); //Only will carry around spinderiv
+    trace(i).spinlap.Resize(wf->nfunc(),3); //val,grad_s,lap_s
   }
 
   timesteps.Resize(recursion_depth_+1);
   timesteps=efftimestep;
-  spintimesteps.Resize(recursion_depth_+1);
-  spintimesteps=spintau;
 
     
   for(int i=2; i< recursion_depth_+1; i++) {
     timesteps(i)=efftimestep/pow(divide_,i-1);
-    spintimesteps(i)=spintau/pow(divide_,i-1);
   }
 
   int depth=0;
@@ -1415,11 +1444,11 @@ int DynSpin_sampler::sample(int e,
   trace(depth).sign=sample->overallSign();
 
   guidingwf->getLap(trace(depth).lap, trace(depth).drift);
-  guidingwf->getSpinLap(trace(depth).spinlap, trace(depth).spindrift);
+  guidingwf->getSpinLap(trace(depth).spinlap, trace(depth).spin_drift);
   depth++;
 
   
-  int acc=dynspin_driver(e, sample, wf, wfdata, guidingwf, depth,  
+  int acc=split_driver(e, sample, wf, wfdata, guidingwf, depth,  
                       info, efftimestep);
 
   if(acc > 0) {
@@ -1441,7 +1470,11 @@ int DynSpin_sampler::sample(int e,
   return acc;
 }
 
-void DynSpin_sampler::showStats(ostream & os) {
+
+//----------------------------------------------------------------------
+
+
+void Dynspin_sampler::showStats(ostream & os) {
   doublevar totacc=0;
   for(int i=0; i< recursion_depth_; i++) {
     totacc+=acceptances(i);
@@ -1454,8 +1487,10 @@ void DynSpin_sampler::showStats(ostream & os) {
   }
 }
 
-void DynSpin_sampler::resetStats() {
+//----------------------------------------------------------------------
+
+
+void Dynspin_sampler::resetStats() {
   acceptances=0;
   tries=0;
 }
-
