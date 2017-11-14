@@ -308,7 +308,6 @@ class Config_save_point {
  private:
   Array1 <Array1 <doublevar> > electronpos;
   //CM:
-  bool dynspin;
   Array1 <doublevar> electronspin;
   
 };
