@@ -256,6 +256,18 @@ void Molecular_sample::randomGuess()
   if(wfObserver)
     wfObserver->notify(all_electrons_move, 0);
 
+  //CM
+  //Dynamic Spin representation
+  //pure spinup = 0.0,pi
+  //pure spindn = pi/2,3pi/4
+  //initialize spins as pure spin up or spin down
+  int nup = parent->nelectrons(0);
+  for (int i = 0; i < nelectrons; i++) {
+      if (i < nup)
+	  setElectronSpin(e,0.0);
+      else
+	  setElectronSpin(e,0.5*pi);
+  }
 
 }
 
