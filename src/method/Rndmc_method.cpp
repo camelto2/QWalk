@@ -52,10 +52,9 @@ void Rndmc_method::read(vector <string> words,
   if(!readvalue(words, pos=0, timestep, "TIMESTEP"))
     error("Need TIMESTEP in METHOD section");
 
-  if(readvalue(words, pos=0, readconfig, "READCONFIG"))
-    canonical_filename(readconfig);
-  else
-    error("Must give READCONFIG for DMC");
+  if(!readvalue(words, pos=0, readconfig, "READCONFIG"))
+    error("Need readconfig for RNDMC");
+
 
   //optional options
 
@@ -925,101 +924,6 @@ void Rndmc_method::savecheckpoint(string & filename,
 
   checkfile.close();
 }
-
-
-//----------------------------------------------------------------------
-
-
-
-void Rndmc_method::restorecheckpoint(string & filename, System * sys,
-                                    Wavefunction_data * wfdata,
-                                    Pseudopotential * pseudo) {
-
-
-  ifstream checkfile(filename.c_str());
-  if(!checkfile) 
-    error("Couldn't open ", filename);
-  long int is1, is2;
-  string dummy;
-  checkfile >> dummy;
-  if(dummy != "RANDNUM") error("Expected RANDNUM in checkfile");
-  checkfile >> is1 >> is2;
-  rng.seed(is1, is2);
-
-  Array1 <Wf_return > value_temp(nconfig);
-  Array2 <doublevar> energy_temp(nconfig, nwf);
-
-
-  int ncread=0; //Number of configs read
-  int nwread=0; //number of weights read
-  while(checkfile >> dummy && 
-	( ncread < nconfig && nwread < nconfig) ) {
-
-    
-    if(read_config(dummy, checkfile, sample)) { 
-      pts(ncread++).config_pos.savePos(sample);
-      
-    }
-
-    if(dummy=="DMC") {
-      checkfile >> dummy;
-      if(dummy != "{") error("Need a { after DMC");
-      checkfile >> dummy >> pts(nwread).weight;
-      if(dummy != "DMCWEIGHT") {
-        error("expected DMCWEIGHT, got ", dummy);
-      }
-      int nwf_temp;
-      checkfile >> dummy >> nwf_temp;
-      if(dummy != "VALEN") {
-        error("expected VALEN, got ", dummy);
-      }
-      if(nwf_temp != nwf) {
-        error("Wrong number of wavefunctions in the checkpoint file");
-      }
-      
-      //Retrieve the old values and energies from the file
-      value_temp(nwread).Resize(nwf, 2);
-      
-      for(int w=0; w< nwf; w++) {
-        checkfile >> value_temp(nwread).phase(w,0) 
-		  >> value_temp(nwread).amp(w,0) 
-                  >> energy_temp(nwread,w);
-      }
-      nwread++;
-
-    }
-
-  }
-
-  //cout << "ncread " << ncread << "  nwread " << nwread << endl;
-  if(nconfig!=ncread) { 
-    error("nconfig doesn't match the number of walkers in the config file");
-  }
-
- 
-  for(int walker=0; walker < nconfig; walker++) {
-    pts(walker).config_pos.restorePos(sample);
-    mygather.gatherData(pts(walker).prop, pseudo, sys,
-                        wfdata, wf, sample,
-                        guidingwf);
-  }
-  
-  find_cutoffs();
-
-  updateEtrial(start_feedback);
-
-  if(do_cdmc) { 
-    if(ncread!=nwread) {
-      cout << "WARNING! do_cdmc and ncread!=nwread " << endl;
-    }
-    cdmcReWeight(energy_temp, value_temp);
-  }
-
-    
-}
-
-
-//----------------------------------------------------------------------
 
 void Rndmc_method::cdmcReWeight(Array2 <doublevar> & energy_temp, 
                               Array1 < Wf_return > & value_temp
