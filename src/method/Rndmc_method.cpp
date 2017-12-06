@@ -70,8 +70,8 @@ void Rndmc_method::read(vector <string> words,
   if(!readvalue(words, pos=0, nhist, "CORR_HIST")) 
     nhist=-1;
 
-  if(readvalue(words, pos=0, storeconfig, "STORECONFIG"))
-    canonical_filename(storeconfig);
+  if(!readvalue(words, pos=0, storeconfig, "STORECONFIG"))
+     storeconfig=options.runid+".config";
 
   if(!readvalue(words, pos=0, log_label, "LABEL"))
     log_label="rndmc";
