@@ -1099,6 +1099,7 @@ void Rndmc_method::restorecheckpoint(string & filename, System * sys,
                         guidingwf);
     pts(walker).age.Resize(sys->nelectrons(0)+sys->nelectrons(1));
     pts(walker).age=0;
+    pts(walker).gprop = pts(walker).prop;
   }
   find_cutoffs();
 
