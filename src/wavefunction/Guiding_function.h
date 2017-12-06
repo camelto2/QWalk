@@ -52,6 +52,8 @@ class Guiding_function {
                                   Wf_return & wf2)=0;
 
   virtual ~Guiding_function() {};
+
+  virtual doublevar getLocalKinetic(Wf_return & laps, int w) = 0;
 };
 
 
@@ -74,6 +76,8 @@ class Dmc_guiding_function:public Guiding_function {
     get the part for a linear operator 
   */
   virtual doublevar getOperatorWeight(Wf_return & lap, int w)=0;
+
+  virtual doublevar getLocalKinetic(Wf_return & laps, int w) = 0;
 
 };  
 
@@ -249,6 +253,7 @@ public:
     return exp((newfunc.amp(0,0)-oldfunc.amp(0,0)))*sqrt(wfratio1/wfratio2);
   }
 
+  virtual doublevar getLocalKinetic(Wf_return & laps, int w) { error("Not implemented for Vmc_sum_squares"); }
 
 };
 
@@ -288,6 +293,8 @@ public:
                                   Wf_return & oldfunc) {
     return newfunc.sign(0)*oldfunc.sign(0)*exp((newfunc.amp(0,0)-oldfunc.amp(0,0)));
   }
+
+  virtual doublevar getLocalKinetic(Wf_return & laps, int w) { error("Not implemented for Primary"); }
 };
 
 
@@ -356,6 +363,20 @@ class Primary_noderelease:public Dmc_guiding_function {
 
       //cout <<" getTrialRatio: factor "<<factor<<endl; 
     return factor*newfunc.sign(0)*oldfunc.sign(0)*exp((newfunc.amp(0,0)-oldfunc.amp(0,0)));
+  }
+
+  virtual doublevar getLocalKinetic(Wf_return & laps,int w) {
+      doublevar factor1,factor2;
+      assert(alpha > 0);
+      factor1 = 1.0/(1.0+exp(log(alpha)-2.0*laps.amp(w,0)));
+      factor2 = factor1*alpha/(exp(2.0*laps.amp(w,0))+alpha);
+      doublevar tmp = 0.0;
+      for (int d = 0; d < 2; d++) 
+	  tmp += laps.amp(w,d+1)*laps.amp(w,d+1);
+      tmp *= factor2;
+      tmp += factor1*laps.amp(w,4);
+      tmp *= -0.5;
+      return tmp;
   }
 };
 

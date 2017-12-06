@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "qmc_io.h"
 #include "ulec.h"
 #include "Program_options.h"
+#include "Generate_sample.h"
 #include "average.h"
 
 
@@ -63,7 +64,7 @@ void Rndmc_method::read(vector <string> words,
 
   if(haskeyword(words, pos=0, "CDMC")) do_cdmc=1;
   else do_cdmc=0;
-  if(haskeyword(words, pos=0, "TMOVES")) tmoves=1; 
+  if(haskeyword(words, pos=0, "TMOVES")) error("NO TMOVES YET for RNDMC");
   else tmoves=0;
 
   if(!readvalue(words, pos=0, nhist, "CORR_HIST")) 
@@ -73,7 +74,7 @@ void Rndmc_method::read(vector <string> words,
     canonical_filename(storeconfig);
 
   if(!readvalue(words, pos=0, log_label, "LABEL"))
-    log_label="dmc";
+    log_label="rndmc";
 
   if(!readvalue(words, pos=0, start_feedback, "START_FEEDBACK"))
     start_feedback=1;
@@ -138,6 +139,10 @@ void Rndmc_method::read(vector <string> words,
   if(alpha==0.0){
     dyngen->enforceNodes(1);
   }
+
+  if(haskeyword(words, pos=0, "NO_BRANCH")) nobranch=1;
+  else nobranch=0;
+
 }
 
 //----------------------------------------------------------------------
@@ -192,14 +197,9 @@ int Rndmc_method::allocateIntermediateVariables(System * sys,
   guidingwf->set_alpha_for_noderelease(tmp_alpha);
   //MB: allocating the rndm points
   pts.Resize(nconfig);
-  pts_unbiased.Resize(nconfig, nstep);
   for(int i=0; i < nconfig; i++) {
     pts(i).age.Resize(nelectrons);
     pts(i).age=0;
-    for(int s=0; s < nstep; s++){ 
-      pts_unbiased(i,s).age.Resize(nelectrons);
-      pts_unbiased(i,s).age=0;
-    }
   }
   
   average_var.Resize(avg_words.size());
@@ -286,7 +286,6 @@ void Rndmc_method::run(Program_options & options, ostream & output) {
   if(!have_allocated_variables) 
     error("Must generate variables to use Dmc_method::run");
   string logfile=options.runid+".log";
-  string logfile2=options.runid+"_unbiased.log";
   string logfile3=options.runid+"_abs_weights.log";
   
   //MB: adding 2 new log files
@@ -299,13 +298,7 @@ void Rndmc_method::run(Program_options & options, ostream & output) {
            << endl;
     logout << "#-------------------------------------------------\n\n\n";
     logout.close();
-    ofstream logout2(logfile2.c_str(), ios::app);
-    logout2 << "#-------------------------------------------------\n";
-    logout2 << "#RN-DMC run: unbiased weights, timestep " << timestep 
-           << endl;
-    logout2 << "#-------------------------------------------------\n\n\n";
-    logout2.close();
-    
+
     ofstream logout3(logfile3.c_str(), ios::app);
     logout3 << "#-------------------------------------------------\n";
     logout3 << "#RN-DMC run: absolute weights, timestep " << timestep 
@@ -316,173 +309,11 @@ void Rndmc_method::run(Program_options & options, ostream & output) {
 
   //MB: setting up the property managers
   myprop.setLog(logfile, log_label);
-  myprop_unbiased.setLog(logfile2, log_label);
   myprop_absolute.setLog(logfile3, log_label);
   runWithVariables(myprop, mysys, mywfdata, mypseudo, output);
 }
 
 //----------------------------------------------------------------------
-
-/*!
-
-
- */
-
-//MB: takes the weights inthe array of pts and finds all negatives
-//MB: and cancel them out with some positive weights
-//MB: only the components of energy and energy are properly adjusted
-//MB: for all the other properties you will neeed to fill in
-
-void produce_positive_weights( Array2 <Dmc_point> & pts){
-  int nconfig=pts.GetDim(0);
-  int npsteps=pts.GetDim(1);
-  int nfunc=pts(0,0).prop.weight.GetSize();
-  
-  for(int p=0; p < npsteps; p++) {
-    Array1 <Properties_point> prop_original(nconfig);
-    Properties_point new_effective;
-    doublevar ave_pos_weight=0.0;
-    doublevar sum_neg_weights=0.0;
-    
-    vector <int>  chosen_neg_walker;
-    vector <int>  all_pos_walker;
-    for(int walker=0; walker < nconfig; walker++) {
-      prop_original(walker)=pts(walker,p).prop;
-      if( pts(walker,p).prop.weight(0)>0 ){
-	ave_pos_weight+=pts(walker,p).prop.weight(0);
-	all_pos_walker.push_back(walker);
-      }
-      else if(pts(walker,p).prop.weight(0)<0){
-	sum_neg_weights+=abs(pts(walker,p).prop.weight(0));
-	chosen_neg_walker.push_back(walker);
-      }
-    }//walker
-
-    new_effective=prop_original(0);
-    new_effective.kinetic=0;
-    new_effective.potential=0;
-    new_effective.nonlocal=0;
-    new_effective.weight=0;
-
-    if(all_pos_walker.size())
-      ave_pos_weight/=all_pos_walker.size();
-    else{
-      error("All weight are negative, not able to the unbiased reweighting");
-    }
-    if(ave_pos_weight*all_pos_walker.size() < sum_neg_weights){
-      cout << "node: "<< mpi_info.node <<" sum of possitive weights= "<<ave_pos_weight*all_pos_walker.size()<<" |sum of negative weights|= "<< sum_neg_weights<<endl;
-      error("not able to the unbiased reweighting !");
-    }
-    //cout <<"sum of possitive weights= "<<ave_pos_weight*all_pos_walker.size()<<" |sum of negative weights|= "<< sum_neg_weights<<endl;
-    if(sum_neg_weights>0){
-      cout << "node: "<<mpi_info.node <<" ave_pos_weight "<<ave_pos_weight<<endl;
-      cout << "node: "<<mpi_info.node <<" sum_neg_weights "<<sum_neg_weights<<endl;
-    }
-
-    vector <int>  chosen_pos_walker;
-    Array1 <int> notselected(nconfig);
-    notselected=1;
-    doublevar residual_weight=0;
-    if(sum_neg_weights > 0.0){
-      
-      doublevar sum_chosen_pos_weights=0;
-      int tries=0;
-      while(sum_chosen_pos_weights< sum_neg_weights+ave_pos_weight){
-	int walker=int(nconfig*rng.ulec());
-	//cout <<"randomly chosen walker: "<<walker<<" with weight "<<pts(walker,p).prop.weight(0)<<" notselected? "<<notselected(walker)<<endl;
-	if(pts(walker,p).prop.weight(0)>0 && notselected(walker)){
-	  //cout <<"accepted "<< walker <<endl;
-	  sum_chosen_pos_weights+=pts(walker,p).prop.weight(0);
-	  chosen_pos_walker.push_back(walker);
-	  notselected(walker)=0;
-	}
-	//cout <<" tried "<<tries<<endl; 
-	if(tries > 2*nconfig){
-	  error("too many tries to match the negative weights");
-	}
-	tries++;
-      }//while
-      cout << "node: "<<mpi_info.node << " tries "<<tries<<endl;
-     
-      residual_weight=sum_chosen_pos_weights-sum_neg_weights;
-      //cout <<" residual_weight "<<residual_weight<<endl;
-
-      /*
-	will need to get new effective values for these
-      Array1 <doublevar> kinetic;
-      Array1 <doublevar> potential;
-      Array1 <doublevar> nonlocal;
-      Array1 <doublevar> weight; //!< averaging weight
-      Wf_return wf_val; //!< wavefunction value
-      Array1 <dcomplex> z_pol; //!< =exp(i G dot sum x_j)
-      Array2 <doublevar> aux_energy;
-      Array2 <doublevar> aux_weight;
-      Array1 <doublevar> aux_jacobian;
-      Array1 <Wf_return> aux_wf_val;
-      Array2 <dcomplex> aux_z_pol;
-      doublevar gf_weight; //weight of green's function between this and the last point(used in DMC)
-      Array1 <doublevar> aux_gf_weight;
-      Array1 <Average_return> avgrets;
-      */
-
-      
-      
-	
-      for(int k=0;k<chosen_pos_walker.size();k++){
-	int w=chosen_pos_walker[k];
-	doublevar weight=abs(prop_original(w).weight(0));
-       	for(int f=0;f<nfunc;f++){
-	  new_effective.kinetic(f)+=weight*prop_original(w).kinetic(f);
-	  new_effective.potential(f)+=weight*prop_original(w).potential(f);
-	  new_effective.nonlocal(f)+=weight*prop_original(w).nonlocal(f);
-	}
-      }
-      for(int k=0;k<chosen_neg_walker.size();k++){
-	int w=chosen_neg_walker[k];
-	doublevar weight=abs(prop_original(w).weight(0));
-	for(int f=0;f<nfunc;f++){
-	  new_effective.kinetic(f)-=weight*prop_original(w).kinetic(f);
-	  new_effective.potential(f)-=weight*prop_original(w).potential(f);
-	  new_effective.nonlocal(f)-=weight*prop_original(w).nonlocal(f);
-	}
-      }
-      for(int f=0;f<nfunc;f++){
-	new_effective.kinetic(f)/=residual_weight;
-	new_effective.potential(f)/=residual_weight;
-	new_effective.nonlocal(f)/=residual_weight;
-	new_effective.weight(f)=residual_weight;
-      }
-      //cout <<"new_effective.energy(0) "<< new_effective.energy(0)<<endl;
-      //cout <<"new_effective.weight(0) "<< new_effective.weight(0)<<endl;
-
-    }//sum_neg_weight > 0.0
-    
-
-    int counter=0;
-    //coping all not chosen
-    for(int walker=0; walker < nconfig; walker++) {
-      //cout <<"notselected array "<<notselected(walker)<<endl;
-      if(notselected(walker) && prop_original(walker).weight(0) >0 ){
-	pts(counter++,p).prop=prop_original(walker);
-      }
-    }
-    //coping 1 new effective positive walker
-    if(counter<nconfig)
-      pts(counter++,p).prop=new_effective;
-
-    //making the rest all zeros
-    while(counter<nconfig){
-      pts(counter,p).prop.kinetic=0;
-      pts(counter,p).prop.potential=0;
-      pts(counter,p).prop.nonlocal=0;
-      pts(counter,p).prop.weight=0;
-      counter++;
-    }
-  }//p
-}
-
-
-
 
 void Rndmc_method::runWithVariables(Properties_manager & prop, 
 				    System * sys, 
@@ -504,17 +335,12 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
   prop.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
 	       wfdata);
 
-  //MB: setting things for the myprop_unbiased and myprop_absolute
-  myprop_unbiased.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
-	       wfdata);
-  
   myprop_absolute.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
 	       wfdata);
+
   restorecheckpoint(readconfig, sys, wfdata, pseudo);
 
   prop.initializeLog(average_var);
-
-  myprop_unbiased.initializeLog(average_var);
 
   myprop_absolute.initializeLog(average_var);
 
@@ -543,9 +369,6 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
   guidingwf->set_alpha_for_noderelease(alpha);
   
   
-
-
-
   nhist=1;
   //setting the projection time for auxillary walkers to 1 a.u.
   
@@ -654,43 +477,31 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
           deque<Dmc_history> & past(pts(walker).past_energies);
           if(past.size() > nhist) 
             past.erase(past.begin()+nhist, past.end());
+
+	  new_hist.main_en=pts(walker).gprop.energy(0);
+	  pts(walker).gpast_energies.push_front(new_hist);
+	  deque<Dmc_history> & gpast(pts(walker).gpast_energies);
+	  if(gpast.size() > nhist)
+	    gpast.erase(past.begin()+nhist,past.end());
           
 	  //copy pt to pts(walker).prop
           pts(walker).prop=pt;
+	  pts(walker).gprop=pt;
+	  update_kinetic_psiG(wfdata,sample,wf,guidingwf,pts(walker).gprop.kinetic);
 
-	  //MB: this is how we track the sign
-          //MB: pts(walker).sign is before the step and the pts(walker).prop.sign(0) is after
-          //MB: if they change weight will change the sign as well
-	  if(pts(walker).sign!=pts(walker).prop.wf_val.sign(0)){
-	    cout <<"node: "<<mpi_info.node <<" walker "<<walker<<" changed the sign "<<endl;
-	    //cout <<" pts(walker).weight "<<pts(walker).weight<<" pts(walker).prop.weight(0) "<<pts(walker).prop.weight(0)<<
-	    // " pts(walker).sign "<<pts(walker).sign<<" pts(walker).prop.sign "<<pts(walker).prop.sign<<endl;
-	    pts(walker).sign*=-1;
-	    pts(walker).weight*=-1;
-	  }
+	  pts(walker).prop.weight(0)*=guidingwf->getTrialRatio(pts(walker).prop.wf_val,pts(walker).prop.wf_val)  //returns |psi_T/psi_G|
+	                              *pts(walker).sign*pts(walker).prop.wf_val.sign(0); //* original sign *current sign
 
-	  //MB: this is part of normal DMC run
-          //MB: because we do not branch adjusting the weights according 
-          //MB: to etrial makes no sence, but disscuss this with lubos, I am leaving this out
-
-	  //pts(walker).weight*=getWeight(pts(walker),teff,etrial);
+	  if(!nobranch) //branching weight, stored energies used are now with psiG
+	      pts(walker).weight*=getWeight(pts(walker),teff,etrial); 
 
           if(pts(walker).ignore_walker) {
             pts(walker).ignore_walker=0;
             pts(walker).weight=1;
             pts(walker).prop.count=0;
           }
-
-	  //MB: this is new, since in DMC pts(walker).prop.weight(0)=1, this was not needed
-          //MB: because alpha>0 it is no longer true
-	  pts(walker).weight*=pts(walker).prop.weight(0);
-	  //keep total weight in pts(walker).weight
-
-	  //MB: finnaly everything is put to pts(walker).prop for averaging
-          pts(walker).prop.weight=pts(walker).weight;
-    //LKW: prop.sign() is redundant information..either the sign should be in 
-          //the weight or in wf_val.
-	  //pts(walker).prop.sign=pts(walker).sign;
+          //property at this point includes weight from branching
+          pts(walker).prop.weight(0)*=pts(walker).weight; 
 	  
 	  //cout <<"final weight is "<<pts(walker).prop.weight(0)<<endl;
 
@@ -708,11 +519,8 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
 	  //MB: after evaluating the properties all are stored in the prop
           prop.insertPoint(step+p, walker, pts(walker).prop);
 
-       	  //MB: copy pts for the calculation of unbiased walker
-	  pts_unbiased(walker, p).prop=pts(walker).prop;
-
 	  //MB: copy another pts for absolute weights
-	  Dmc_point  pts_absolute;
+	  Rndmc_point  pts_absolute;
 	  pts_absolute=pts(walker);
 	  pts_absolute.prop.weight=fabs(pts_absolute.prop.weight(0));
 	  myprop_absolute.insertPoint(step+p, walker, pts_absolute.prop);
@@ -740,20 +548,6 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
       }
       */
       
-      //MB: this makes unbiased positive  weights according the to lubos scheme
-      //MB: current drawback is that happens on each node separately so meake sure you have enough walkers per node!
-      produce_positive_weights(pts_unbiased);
-      
-      //cout <<"after produce_positive_weights"<<endl;
-      //MB: store unbiased prop for averaging 
-      for(int p=0; p < npsteps; p++) {
-	for(int walker=0; walker < nconfig; walker++) {
-	  //cout <<"energy: "<<pts_unbiased(walker,p).prop.energy(0)<<" weight "<<pts_unbiased(walker,p).prop.weight(0)<<endl;
-	  myprop_unbiased.insertPoint(step+p, walker, pts_unbiased(walker,p).prop);
-	 }
-	//cout <<endl;
-       }
-      
       doublevar accept_ratio=acsum/(nconfig*nelectrons*npsteps);
       teff=timestep*accept_ratio; //deltar2/rf_diffusion; 
 
@@ -763,6 +557,7 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
 
       //MB: turnning off branching 
       int nkilled=0; //calcBranch();
+      if(!nobranch) nkilled = calcBranch();
       totkilled+=nkilled;
       totbranch+=nkilled;
     }//step
@@ -779,8 +574,6 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
 
     
     prop.endBlock();
-    //MB: averaging over block for the unbiased and absolute weights
-    myprop_unbiased.endBlock();
     myprop_absolute.endBlock();
 
     totbranch=parallel_sum(totbranch);
@@ -788,43 +581,27 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
     totpoints=parallel_sum(totpoints);
 
     Properties_final_average finavg;
-    Properties_final_average finavg2;
     Properties_final_average finavg3;
 
     prop.getFinal(finavg);
-    myprop_unbiased.getFinal(finavg2);
     myprop_absolute.getFinal(finavg3);
 
 
     Properties_block lastblock;
-    Properties_block lastblock2;
     Properties_block lastblock3;
 
     prop.getLastBlock(lastblock);
-    myprop_unbiased.getLastBlock(lastblock2);
     myprop_absolute.getLastBlock(lastblock3);
     
 
-    //MB: finalavg: total average value over all blocks up to this time
-    //MB: lastblock: average value for last block
-
-    //MB: original DMC had eref as this:
-    eref=finavg2.avg(Properties_types::total_energy,0);
-    //MB: not sure this makes sence for the release node
-    //MB: maybe it should be only over the last block
-    //eref=lastblock2.avg(Properties_types::total_energy,0);
-
+    eref=finavg.avg(Properties_types::total_energy,0);
     updateEtrial(feedback);
    
-    //MB: this is lubos's effectivity, which is ratio of averaged signed
-    //MB: weights to averaged absolute weights 
-    //MB: bellow is the value for each block
-
-    doublevar effectivity;
+    doublevar efficiency;
     doublevar weight_biased=lastblock.avg(Properties_types::weight,0);
     doublevar weight_abs=lastblock3.avg(Properties_types::weight,0);
 
-    effectivity=weight_biased/weight_abs;
+    efficiency=weight_biased/weight_abs;
         
     doublevar maxage=0;
     doublevar avgage=0;
@@ -857,12 +634,10 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
 
       output<<"\n ---- biased weights ---- \n";
       prop.printBlockSummary(output);
-      output<<"\n ---- unbiased weights ---- \n";
-      myprop_unbiased.printBlockSummary(output);
      
       output<<"\n ---- absolute weights ---- \n";
       myprop_absolute.printBlockSummary(output);
-      output<<"\n effectivity  "<<effectivity<<" signed weight "<<weight_biased<<" absolute weight "<<weight_abs<<endl;
+      output<<"\n RN efficiency  "<<efficiency<< endl;
 
       output << "Branched "
 	     << totbranch << " times.  So a branch every " 
@@ -878,8 +653,6 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
     output << "\n ----------Finished RN-DMC------------\n\n";
     output<<"\n ---- biased weights ---- \n";
     prop.printSummary(output,average_var);
-    output<<"\n ---- unbiased weights ---- \n";
-    myprop_unbiased.printSummary(output,average_var); 
     output<<"\n ---- absolute weights ---- \n";
     myprop_absolute.printSummary(output,average_var);
   }
@@ -904,7 +677,7 @@ void Rndmc_method::savecheckpoint(string & filename,
 
   checkfile.precision(15);
   for(int i=0; i< nconfig; i++) { 
-    Dmc_point & mypt(pts(i));
+    Rndmc_point & mypt(pts(i));
     checkfile << "SAMPLE_POINT { \n";
     mypt.config_pos.restorePos(config);
     write_config(checkfile, config);
@@ -1071,14 +844,14 @@ void Rndmc_method::updateEtrial(doublevar feed) {
 
 //----------------------------------------------------------------------
 
-doublevar Rndmc_method::getWeight(Dmc_point & pt,
+doublevar Rndmc_method::getWeight(Rndmc_point & pt,
                                 doublevar teff, doublevar etr) {
   doublevar teffac=teff/2.0;
 
   doublevar effenergy=0, effoldenergy=0;
 
-  effenergy=pt.prop.energy(0);
-  effoldenergy=pt.past_energies[0].main_en;
+  effenergy=pt.gprop.energy(0);
+  effoldenergy=pt.gpast_energies[0].main_en;
 
   doublevar fbet=max(etr-effenergy, etr-effoldenergy);
 
@@ -1243,7 +1016,7 @@ int Rndmc_method::calcBranch() {
   }
   //cout << mpi_info.node << ": send queue= " << send_queue.size() << endl;
   //now do branching for the walkers that we get to keep
-  Array1 <Dmc_point> savepts=pts;
+  Array1 <Rndmc_point> savepts=pts;
   int curr=0; //what walker we're currently copying from
   int curr_copy=0; //what walker we're currently copying to
   while(curr_copy < min(nnwalkers,nconfig)) { 
@@ -1289,5 +1062,81 @@ int Rndmc_method::calcBranch() {
   return killsize;
   //exit(0);
 }
+
+
+void Rndmc_method::restorecheckpoint(string & filename, System * sys,
+                                    Wavefunction_data * wfdata,
+                                    Pseudopotential * pseudo) {
+
+  ifstream is(filename.c_str());
+  if(is) { 
+    is.close();
+    read_configurations(filename, pts);
+  }
+  else { 
+    Array1 <Config_save_point>  configs;
+    generate_sample(sample,wf,wfdata,guidingwf,nconfig,configs);
+    pts.Resize(nconfig);
+    for(int i=0; i< nconfig; i++) 
+      pts(i).config_pos=configs(i);
+  }
+  int ncread=pts.GetDim(0);
+  
+  //cout << "ncread " << ncread << "  nwread " << nwread << endl;
+  if(nconfig < ncread) { 
+    Array1 <Rndmc_point> tmp_pts(nconfig);
+    for(int i=0; i< nconfig; i++) tmp_pts(i)=pts(i);
+    pts=tmp_pts;
+  }
+  else if(nconfig > ncread) { 
+    error("Not enough configurations in ", filename);
+  }
+
+  for(int walker=0; walker < nconfig; walker++) {
+    pts(walker).config_pos.restorePos(sample);
+    mygather.gatherData(pts(walker).prop, pseudo, sys,
+                        wfdata, wf, sample,
+                        guidingwf);
+    pts(walker).age.Resize(sys->nelectrons(0)+sys->nelectrons(1));
+    pts(walker).age=0;
+  }
+  find_cutoffs();
+
+  updateEtrial(start_feedback);
+    
+}
+
+
+
+
+void Rndmc_method::update_kinetic_psiG(Wavefunction_data * wfdata,
+	                               Sample_point * sample,
+				       Wavefunction * wf,
+				       Guiding_function * gwf,
+				       Array1<doublevar> & kinetic) {
+    Array2<doublevar> Kin;
+    int nelectrons = sample->electronSize();
+    int nwf = wf->nfunc();
+    wf->updateLap(wfdata,sample);
+    Wf_return temp(nwf,5);
+    Kin.Resize(nelectrons,nwf);
+    for(int w=0; w < nwf; w++) {
+	for (int e = 0; e < nelectrons; e++) {
+	    wf->getLap(wfdata,e,temp);
+	    assert(temp.is_complex == 0);
+	    Kin(e,w) = gwf->getLocalKinetic(temp,w);
+	}
+    }
+
+    assert(kinetic.GetDim(0) == nwf);
+    for (int w = 0; w < nwf; w++) {
+	kinetic(w) = 0.0;
+	for (int e = 0; e < nelectrons; e++) {
+	    kinetic(w) += Kin(e,w);
+	}
+    }
+
+}
+
 //----------------------------------------------------------------------
 

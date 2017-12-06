@@ -37,6 +37,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 class Program_options;
 
+struct Rndmc_point: Dmc_point {
+    deque <Dmc_history> gpast_energies;
+    Properties_point gprop;
+};
+
 class Rndmc_method : public Qmc_avg_method
 {
 public:
@@ -88,8 +93,6 @@ public:
  private:
 
   Properties_manager myprop;
-  //MB: 2 new property managers for averaging over unbiased weights and absolute weights
-  Properties_manager myprop_unbiased;
   Properties_manager myprop_absolute;
   Properties_gather mygather;
 
@@ -115,7 +118,7 @@ public:
                     Array1 < Wf_return> & value_temp);
 
   
-  doublevar getWeight(Dmc_point & pt,
+  doublevar getWeight(Rndmc_point & pt,
                       doublevar teff, doublevar etr);
 
   
@@ -171,9 +174,9 @@ public:
   Wavefunction_data * mywfdata;
 
   //MB: original rndmc_point 
-  Array1 <Dmc_point> pts;
+  Array1 <Rndmc_point> pts;
   //MB: added new rndmc point for the unbiased weights according to lubos
-  Array2 <Dmc_point> pts_unbiased;
+  Array2 <Rndmc_point> pts_unbiased;
 
   Array1 < Local_density_accumulator *> densplt;
   vector <vector <string> > dens_words;
@@ -183,6 +186,12 @@ public:
   vector <vector <string> > avg_words;
 
   doublevar alpha;
+  int nobranch;
+  void update_kinetic_psiG(Wavefunction_data * wfdata,
+			   Sample_point * sample,
+			   Wavefunction * wf,
+			   Guiding_function * gwf,
+			   Array1<doublevar> & kinetic);
 
 };
 
