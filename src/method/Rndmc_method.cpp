@@ -667,35 +667,9 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
 void Rndmc_method::savecheckpoint(string & filename,                     
                                  Sample_point * config) {
   if(filename=="") return;
-  ofstream checkfile(filename.c_str());
-  if(!checkfile) error("Couldn't open", filename );
-  checkfile.precision(15);
-  
-  long int is1, is2;
-  rng.getseed(is1, is2);
-  checkfile << "RANDNUM " << is1 << "  " << is2 << endl;
+  write_configurations(filename, pts);
 
-  checkfile.precision(15);
-  for(int i=0; i< nconfig; i++) { 
-    Rndmc_point & mypt(pts(i));
-    checkfile << "SAMPLE_POINT { \n";
-    mypt.config_pos.restorePos(config);
-    write_config(checkfile, config);
-    checkfile << "   DMC { \n";
-    checkfile << "DMCWEIGHT " << mypt.weight << endl;
-    checkfile << "VALEN " << nwf << endl; 
-    for(int w=0; w< nwf; w++) {
-      checkfile << mypt.prop.wf_val.phase(w,0) << "  "
-		<< mypt.prop.wf_val.amp(w,0) << "  "
-		<< mypt.prop.energy(w)
-		<< endl;
-    }
-
-    checkfile << "   } \n";
-    checkfile << "}\n\n";
-  }
-
-  checkfile.close();
+  return;
 }
 
 void Rndmc_method::cdmcReWeight(Array2 <doublevar> & energy_temp, 
