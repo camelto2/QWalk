@@ -403,8 +403,16 @@ void Rndmc_method::runWithVariables(Properties_manager & prop,
           
           for(int e=0; e< nelectrons; e++) {
             int acc;
+	    //CM
+	    wf->getLap(wfdata,e,wf_val);
+	    doublevar oldsign = wf_val.sign(0);
             acc=dyngen->sample(e, sample, wf, wfdata, guidingwf,
                                dinfo, timestep);
+	    //CM
+	    wf->updateLap(wfdata, sample);
+	    wf->getLap(wfdata,e,wf_val);
+	    doublevar newsign = wf_val.sign(0);
+	    if(oldsign*newsign < 0) cout << "Crossed Node" << endl;
             
             if(dinfo.accepted) 
               deltar2+=dinfo.diffusion_rate/(nconfig*nelectrons*npsteps);
