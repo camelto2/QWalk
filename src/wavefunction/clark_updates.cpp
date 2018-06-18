@@ -170,4 +170,133 @@ void Excitation_list::build_excitation_list(Array3 <Array1 <int> > & occupation,
   
 }
 
+void Spinor_Excitation_list::build_excitation_list(Array2 <Array1 <int> > & occupation,int f) { //(function,det) (orb #)
+  int ndet=occupation.GetDim(1);
+  int ne = occupation(0,0).GetDim(0);
+  excitations.Resize(ndet);
+  //Assume that the base determinant is the first one!
+  int base=0;
+  for(int d=0; d< ndet; d++) { 
+    //Find the differences with the base determinant
+    vector <int> tot_missing;
+    vector <int> tot_additional;
+    //This search could likely be improved, but be careful with ordering,
+    for(int e1=0; e1 < ne; e1++) { 
+      int o1=occupation(0,base)(e1);
+      bool found=false;
+      for(int e2=0; e2 < ne; e2++) { 
+        if(occupation(0,d)(e2)==o1) {
+          found=true;
+          break;
+        }
+      }
+      if(!found)tot_missing.push_back(o1);
+      int o2=occupation(0,d)(e1);
+      found=false;
+      for(int e2=0; e2 < ne; e2++) {
+        if(occupation(0,base)(e2)==o2) { 
+          found=true;
+          break;
+        }
+      }
+      if(!found) { 
+        tot_additional.push_back(o2);
+      }
+
+    }
+    //The update formulation works in terms of replacing an occupied orbital with a
+    //virtual one.  By default, QWalk converters order determinants by orbital number.
+    //These representations are equivalent up to a sign, which we determine here in 
+    //a fairly general way
+
+    excitations[d].sign=1;
+    Array1<int> newocc=occupation(0,base);
+    int nex=tot_additional.size();
+    for(int e=0; e< ne; e++) { 
+      for(int ex=0; ex< nex; ex++)  {
+        if(newocc[e]==tot_missing[ex])
+          newocc[e]=tot_additional[ex];
+      }
+    }
+    int count=0;
+    for(int e1=0; e1 < ne; e1++) {
+      for(int e2=e1+1; e2 < ne; e2++) { 
+        if(newocc[e2]<newocc(e1)) count++;
+        if(occupation(0,d)(e2) < occupation(0,d)(e1)) count--;
+      }
+    }
+    //   cout << "d " << d << " count " << count << endl;
+    if(count%2==1) excitations[d].sign*=-1;
+
+
+    //tot_missing and tot_additional should be filled now.
+    nex=tot_missing.size();
+    if(nex != tot_additional.size()) { 
+      error("In build_excitationscitation_list: different numbers of holes and particles");
+    }
+    excitations[d].g.Resize(nex);
+    excitations[d].e.Resize(nex);
+    for(int i=0; i< nex; i++) {
+      excitations[d].g[i]=tot_missing[i];
+      excitations[d].e[i]=tot_additional[i];
+      cout << "d " << d << " i " << i << " : " << excitations[d].g[i] << " -> " << excitations[d].e[i] << " sign " << excitations[d].sign <<  endl;
+    }
+
+  }
+
+
+  //Now we build some of the lookup variables
+  int nex=excitations.GetDim(0);
+  for(int e=0; e< nex; e++) { 
+    for(int i=0; i< excitations(e).g.GetDim(0); i++) { 
+      int g=excitations(e).g(i);
+      bool found=false;
+      for(vector<int>::iterator gi=allg.begin(); gi!=allg.end(); gi++) {
+        if(g==*gi) {
+          found=true;
+          break;
+        }
+      }
+      if(!found) allg.push_back(g);
+      int ex=excitations(e).e(i);
+      found=false;
+      for(vector<int>::iterator ei=alle.begin(); ei!=alle.end(); ei++) {
+        if(ex==*ei) {
+          found=true;
+          break;
+        }
+      }
+      if(!found) alle.push_back(ex);
+    }
+  }
+
+  
+
+  //Array1 <Excitation> remap(nex);
+  remap.Resize(nex);
+  for(int e=0; e< nex; e++) { 
+    int n=excitations(e).g.GetDim(0);
+
+    remap(e).g.Resize(n);
+    remap(e).e.Resize(n);
+
+    int ng=allg.size();
+    int ne=alle.size();
+    for(int i=0; i< n; i++) { 
+      for(int j=0; j< ng; j++) { 
+        if(allg[j]==excitations(e).g(i)) {
+          remap(e).g(i)=j;
+          break;
+        }
+      }
+      for(int j=0; j< ne; j++) { 
+        if(alle[j]==excitations(e).e(i)) { 
+          remap(e).e(i)=j;
+          break;
+        }
+      }
+    }
+  }
+
+}
 

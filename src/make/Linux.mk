@@ -6,7 +6,7 @@
 CXX:=g++
 F77:=gfortran
 
-CXXFLAGS := -O3  \
+CXXFLAGS := -g \
    -funroll-loops -ffast-math \
   $(INCLUDEPATH) -fomit-frame-pointer
 

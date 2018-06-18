@@ -179,6 +179,8 @@ void Molecular_sample::init(System * sys) {
 
   elecpos.Resize(nelectrons, 3);
   elecpos=0.0;
+  elecspin.Resize(nelectrons);
+  elecspin = 0.0;
   iondist.Resize(5,nions,nelectrons);
   iondist=0.0;
   pointdist.Resize(5, nelectrons, nelectrons);
@@ -264,9 +266,9 @@ void Molecular_sample::randomGuess()
   int nup = parent->nelectrons(0);
   for (int i = 0; i < nelectrons; i++) {
       if (i < nup)
-	  setElectronSpin(e,0.0);
+	  setElectronSpin(i,0.0);
       else
-	  setElectronSpin(e,0.5*pi);
+	  setElectronSpin(i,0.5*pi);
   }
 
 }
@@ -440,10 +442,9 @@ void Molecular_sample::rawInput(istream & is)
 
 }
 
-void Molecular_sample::setElectronSpin(const int e, const doublevar & s) {
+void Molecular_sample::setElectronSpin(const int e, const doublevar s) {
 
   elecspin(e) = s;
-
   if(wfObserver)
     wfObserver->notify(electron_move, e); //Spin changed, notify WF
 

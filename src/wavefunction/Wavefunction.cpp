@@ -148,7 +148,15 @@ void Wavefunction::getForceBias(Wavefunction_data * wfdata, int e,
 
 //----------------------------------------------------------------------
 
+void Wavefunction::updateSpinLap(Wavefunction_data *, Sample_point *) {
+    error("This WF does not support updateSpinLap");
+}
 
+void Wavefunction::getSpinLap(Wavefunction_data *, int, Wf_return & ) {
+    error("This WF does not support getSpinLap currently");
+}
+
+//----------------------------------------------------------------------
 
 int deallocate(Wavefunction * & wfptr)
 {

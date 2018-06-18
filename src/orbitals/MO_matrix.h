@@ -39,6 +39,9 @@ class General_MO_matrix {
     down MO's, and only evaluate up when an up electron is moved.
    */
   virtual void buildLists(Array1 <Array1 <int> > & occupations)=0;
+  virtual void buildLists(Array1 <int> & occupations) {
+      error("Must pass occupations as Array1<Array1<int> > to indicate different spins.\n Only needed for spinor orbitals"); 
+  }
 
   /*!
     get the number of molecular orbitals
@@ -79,6 +82,7 @@ public:
     down MO's, and only evaluate up when an up electron is moved.
    */
   virtual void buildLists(Array1 <Array1 <int> > & occupations)=0;
+
   virtual void setOrbfile(string & x) {
     orbfile=x;
   }
@@ -125,6 +129,22 @@ public:
     Array2 <T> & newvals
     //!< The return: in form (MO)
   )=0;
+  virtual void updateVal(
+    Sample_point * sample,
+    int e,
+    //!< electron number
+    Array2 <T> & newvals
+    //!< The return: in form (MO)
+  )
+  { error("Must pass spin index. This is only used for spinor orbitals"); }
+
+  virtual void updateSpinVal(
+    Sample_point * sample,
+    int e,
+    //!< electron number
+    Array2 <T> & newvals
+    //!< The return: in form (MO)
+  ) { error("updateSpinVal not implemented"); }
 
   virtual void getBasisVal(
     Sample_point * sample,
@@ -145,9 +165,36 @@ public:
     //!< The return: in form (MO,[value gradient lap])
   )=0;
 
+  virtual void updateLap(
+    Sample_point * sample,
+    int e,
+    //!< electron number
+    //!< Choose the list that was built in buildLists
+    Array2 <T> & newvals
+    //!< The return: in form (MO,[value gradient lap])
+  )
+  { error("Must pass spin index. This is only used for spinor orbitals"); }
+
+  virtual void updateSpinLap(
+    Sample_point * sample,
+    int e,
+    //!< electron number
+    //!< Choose the list that was built in buildLists
+    Array2 <T> & newvals
+    //!< The return: in form (MO,[value gradient lap])
+  )
+  { error("updateSpinLap not implemented"); }
+
   virtual void updateHessian(Sample_point * sample,
 			     int e,
 			     int listnum,
+			     Array2 <T>& newvals
+			     //!< in form (MO, [value gradient, dxx,dyy,dzz,dxy,dxz,dyz])
+			     ) { 
+    error("this MO_matrix doesn't support Hessians");
+  }
+  virtual void updateHessian(Sample_point * sample,
+			     int e,
 			     Array2 <T>& newvals
 			     //!< in form (MO, [value gradient, dxx,dyy,dzz,dxy,dxz,dyz])
 			     ) { 

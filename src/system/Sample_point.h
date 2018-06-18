@@ -245,7 +245,7 @@ public:
   //CM:
   //Dynamic Spin Functions
   virtual void getElectronSpin(const int e, doublevar & s) = 0;
-  virtual void setElectronSpin(const int e, const doublevar & s) = 0;
+  virtual void setElectronSpin(const int e, const doublevar s) = 0;
 
 protected:
   Wavefunction * wfObserver;

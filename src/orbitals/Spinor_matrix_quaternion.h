@@ -18,8 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
  
 */
 
-#ifndef MO_MATRIX_QUATERNION_H_INCLUDED
-#define MO_MATRIX_QUATERNION_H_INCLUDED
+#ifndef SPINOR_MATRIX_QUATERNION_H_INCLUDED
+#define SPINOR_MATRIX_QUATERNION_H_INCLUDED
 
 #include "Array.h"
 #include "Qmc_std.h"
@@ -70,11 +70,10 @@ template<class T>
 quaternion operator*(quaternion q, T x) { return x*q; };
 
 //Quaternion times quaternion
-template<>
-quaternion operator*<quaternion>(quaternion q, quaternion r) {
+quaternion operator*(quaternion q, quaternion r) {
     quaternion tmp;
-    tmp.val.first  = q.first*r.first - r.second*q.second;
-    tmp.val.second = q.first*r.second + r.first*q.second;
+    tmp.val.first  = q.val.first*r.val.first - r.val.second*q.val.second;
+    tmp.val.second = q.val.first*r.val.second + r.val.first*q.val.second;
     return tmp;
 }
 
@@ -149,7 +148,7 @@ inline void overloaded_broadcast(Array1 <quaternion> & v) {
 
 //----------------------------------------------------------------------------
 
-class MO_matrix_quaternion: public Complex_MO_matrix {
+class Spinor_matrix_quaternion: public Complex_MO_matrix {
 protected:
   void init();
 
@@ -172,9 +171,9 @@ private:
   //Array2 <doublevar> moCoeff;
   //Array2 <int> basisfill;
 
-  Array1 < Array2 <int> > basisfill_list;
-  Array1 < Array2 <quaternion> > moCoeff_list;
-  Array1 < Array1 <int> > basismo_list;
+  Array2 <int>  basisfill_list;
+  Array2 <quaternion>  moCoeff_list;
+  Array1 <int>  basismo_list;
 
  Array1 <doublevar> symmvals_temp1d;
  Array2 <doublevar> symmvals_temp2d;
@@ -189,7 +188,8 @@ public:
     be evaluated.  For example, one can create a list of spin up and spin
     down MO's, and only evaluate up when an up electron is moved.
    */
-  virtual void buildLists(Array1 <Array1 <int> > & occupations);
+  virtual void buildLists(Array1< Array1 <int> > & occupations) {error("Spinors do not need a spin index"); }
+  virtual void buildLists(Array1 <int> & occupations);
 
   /*!
     get the number of molecular orbitals
@@ -236,6 +236,14 @@ public:
     int listnum,
     Array2 <dcomplex> & newvals
     //!< The return: in form (MO)
+  ) { error("Spinors do not need a spin index"); }
+
+  virtual void updateVal(
+    Sample_point * sample,
+    int e,
+    //!< electron number
+    Array2 <dcomplex> & newvals
+    //!< The return: in form (MO)
   );
   
   virtual void getBasisVal(
@@ -251,12 +259,18 @@ public:
     int e,
     int listnum,
     Array2 <dcomplex> & newvals
+  ) { error("Spinors do not need a spin index"); }
+
+  virtual void updateLap(
+    Sample_point * sample,
+    int e,
+    Array2 <dcomplex> & newvals
   );
+
   virtual void updateSpinLap(
     Sample_point * sample,
     int e,
     //!< electron number
-    int listnum,
     Array2 <dcomplex> & newvals
     //!< The return: in form (MO)
   );
@@ -265,8 +279,14 @@ public:
 			     int listnum,
 			     Array2 <dcomplex>& newvals
 			     //!< in form ([value gradient, dxx,dyy,dzz,dxy,dxz,dyz], MO)
+			     ) { error("Spinors do not need a spin index"); }
+
+  virtual void updateHessian(Sample_point * sample,
+			     int e,
+			     Array2 <dcomplex>& newvals
+			     //!< in form ([value gradient, dxx,dyy,dzz,dxy,dxz,dyz], MO)
 			     );
-  MO_matrix_quaternion()
+  Spinor_matrix_quaternion()
   {}
 
 };
@@ -274,13 +294,13 @@ public:
 //######################################################################
 
 #include "Qmc_std.h"
-#include "MO_matrix_quaternion.h"
+#include "Spinor_matrix_quaternion.h"
 #include "Sample_point.h"
 #include "qmc_io.h"
 
 
 
-void MO_matrix_quaternion::init() {
+void Spinor_matrix_quaternion::init() {
 
   
   //Determine where to cut off the basis functions
@@ -390,7 +410,7 @@ void MO_matrix_quaternion::init() {
 
 //---------------------------------------------------------------------------------------------
 
-void MO_matrix_quaternion::writeorb(ostream & os, 
+void Spinor_matrix_quaternion::writeorb(ostream & os, 
     Array2 <doublevar> & rotation, Array1 <int>  &moList) {
 
 
@@ -486,35 +506,28 @@ void MO_matrix_quaternion::writeorb(ostream & os,
 }
 //---------------------------------------------------------------------
 
-void MO_matrix_quaternion::buildLists(Array1 < Array1 <int> > & occupations){
-  int numlists=occupations.GetDim(0);
-  basisfill_list.Resize(numlists);
-  moCoeff_list.Resize(numlists);
-  basismo_list.Resize(numlists);
-  for(int lis=0; lis < numlists; lis++)
+void Spinor_matrix_quaternion::buildLists(Array1 <int> & occupations){
+  int nmo_list=occupations.GetDim(0);
+  basisfill_list.Resize(totbasis, nmo_list);
+  moCoeff_list.Resize(totbasis, nmo_list);
+  basismo_list.Resize(totbasis);
+  basismo_list=0;
+  for(int i=0; i < nmo_list; i++)
   {
-    int nmo_list=occupations(lis).GetDim(0);
-    basisfill_list(lis).Resize(totbasis, nmo_list);
-    moCoeff_list(lis).Resize(totbasis, nmo_list);
-    basismo_list(lis).Resize(totbasis);
-    basismo_list(lis)=0;
-    for(int i=0; i < nmo_list; i++)
+    int mo=occupations(i);
+    for(int bas=0; bas < nbasis(mo); bas++)
     {
-      int mo=occupations(lis)(i);
-      for(int bas=0; bas < nbasis(mo); bas++)
-      {
-        int func=mofill(mo, bas);
+      int func=mofill(mo, bas);
 
-        //basisfill_list(lis)(func, basismo_list(lis)(func))=mo;
-        basisfill_list(lis)(func, basismo_list(lis)(func))=i;
-        moCoeff_list(lis)(func, basismo_list(lis)(func))=moCoeff2(mo, bas);
-        //cout << "basisfill_list " << 2 << "  f  "
-        //     << func << "  mo " <<  mo;
-        //cout << "  basis coeff " << moCoeff2(mo, bas) << endl;
-        //cout << "real basisfill " << basisfill(func, basismo_list(lis)(func))
-        //     << " coeff  " << moCoeff(func, basismo_list(lis)(func)) << endl;
-        basismo_list(lis)(func)++;
-      }
+      //basisfill_list(lis)(func, basismo_list(lis)(func))=mo;
+      basisfill_list(func, basismo_list(func))=i;
+      moCoeff_list(func, basismo_list(func))=moCoeff2(mo, bas);
+      //cout << "basisfill_list " << 2 << "  f  "
+      //     << func << "  mo " <<  mo;
+      //cout << "  basis coeff " << moCoeff2(mo, bas) << endl;
+      //cout << "real basisfill " << basisfill(func, basismo_list(lis)(func))
+      //     << " coeff  " << moCoeff(func, basismo_list(lis)(func)) << endl;
+      basismo_list(func)++;
     }
   }
 }
@@ -522,7 +535,7 @@ void MO_matrix_quaternion::buildLists(Array1 < Array1 <int> > & occupations){
 
 //----------------------------------------------------------------------
 
-int MO_matrix_quaternion::showinfo(ostream & os)
+int Spinor_matrix_quaternion::showinfo(ostream & os)
 {
   os << "Cutoff MO " << endl;
   os << "Number of molecular orbitals: " << nmo << endl;
@@ -535,7 +548,7 @@ int MO_matrix_quaternion::showinfo(ostream & os)
   return 1;
 }
 
-int MO_matrix_quaternion::writeinput(string & indent, ostream & os)
+int Spinor_matrix_quaternion::writeinput(string & indent, ostream & os)
 {
   os << indent << "CUTOFF_MO" << endl;
   os << indent << "NMO " << nmo << endl;
@@ -558,8 +571,8 @@ int MO_matrix_quaternion::writeinput(string & indent, ostream & os)
 }
 //------------------------------------------------------------------------
 
-void MO_matrix_quaternion::updateVal(
-  Sample_point * sample,  int e,  int listnum,  Array2 <dcomplex> & newvals) {
+void Spinor_matrix_quaternion::updateVal(
+  Sample_point * sample,  int e,  Array2 <dcomplex> & newvals) {
   //cout << "start updateval " << endl;
   int centermax=centers.size();
 
@@ -570,9 +583,9 @@ void MO_matrix_quaternion::updateVal(
   //Array1 <doublevar> symmvals_temp(maxbasis);
 
   //Make references for easier access to the list variables.
-  Array1 <int> & basismotmp(basismo_list(listnum));
-  Array2 <int> & basisfilltmp(basisfill_list(listnum));
-  Array2 <quaternion> & moCoefftmp(moCoeff_list(listnum));
+  Array1 <int> & basismotmp(basismo_list);
+  Array2 <int> & basisfilltmp(basisfill_list);
+  Array2 <quaternion> & moCoefftmp(moCoeff_list);
   assert(newvals.GetDim(1) >= 1);
 
   newvals=0;
@@ -581,7 +594,7 @@ void MO_matrix_quaternion::updateVal(
   //int fn;
   quaternion c;
   int mo=0;
-  int scalebasis=basisfill_list(listnum).GetDim(1);
+  int scalebasis=basisfill_list.GetDim(1);
   int totfunc=0;
   int b; //basis
   //cout << "here " << endl;
@@ -629,8 +642,8 @@ void MO_matrix_quaternion::updateVal(
 
 //------------------------------------------------------------------------
 
-void MO_matrix_quaternion::updateLap( Sample_point * sample,
-  int e, int listnum, Array2 <dcomplex> & newvals) {
+void Spinor_matrix_quaternion::updateLap( Sample_point * sample,
+  int e, Array2 <dcomplex> & newvals) {
 
   //cout << "updateLap" << endl;
   int centermax=centers.size();
@@ -649,9 +662,9 @@ void MO_matrix_quaternion::updateLap( Sample_point * sample,
    //cout << "arrayref " << endl;
 
   //References to make the code easier to read and slightly faster.
-  Array1 <int> & basismotmp(basismo_list(listnum));
-  Array2 <int> & basisfilltmp(basisfill_list(listnum));
-  Array2 <quaternion> & moCoefftmp(moCoeff_list(listnum));
+  Array1 <int> & basismotmp(basismo_list);
+  Array2 <int> & basisfilltmp(basisfill_list);
+  Array2 <quaternion> & moCoefftmp(moCoeff_list);
 
   Basis_function * tempbasis;
 
@@ -727,8 +740,8 @@ void MO_matrix_quaternion::updateLap( Sample_point * sample,
 
 }
 
-void MO_matrix_quaternion::updateSpinLap(
-  Sample_point * sample,  int e,  int listnum,  Array2 <dcomplex> & newvals) {
+void Spinor_matrix_quaternion::updateSpinLap(
+  Sample_point * sample,  int e, Array2 <dcomplex> & newvals) {
   //cout << "start updateval " << endl;
   int centermax=centers.size();
 
@@ -739,9 +752,9 @@ void MO_matrix_quaternion::updateSpinLap(
   //Array1 <doublevar> symmvals_temp(maxbasis);
 
   //Make references for easier access to the list variables.
-  Array1 <int> & basismotmp(basismo_list(listnum));
-  Array2 <int> & basisfilltmp(basisfill_list(listnum));
-  Array2 <quaternion> & moCoefftmp(moCoeff_list(listnum));
+  Array1 <int> & basismotmp(basismo_list);
+  Array2 <int> & basisfilltmp(basisfill_list);
+  Array2 <quaternion> & moCoefftmp(moCoeff_list);
   assert(newvals.GetDim(1) >= 3);
 
   newvals=0;
@@ -750,7 +763,7 @@ void MO_matrix_quaternion::updateSpinLap(
   //int fn;
   quaternion c;
   int mo=0;
-  int scalebasis=basisfill_list(listnum).GetDim(1);
+  int scalebasis=basisfill_list.GetDim(1);
   int totfunc=0;
   int b; //basis
   //cout << "here " << endl;
@@ -799,10 +812,9 @@ void MO_matrix_quaternion::updateSpinLap(
 }
 //--------------------------------------------------------------------------
 
-void MO_matrix_quaternion::updateHessian(
+void Spinor_matrix_quaternion::updateHessian(
   Sample_point * sample,
   int e,
-  int listnum,
   //const Array1 <int> & occupation,
   //!<A list of the MO's to evaluate
   Array2 <dcomplex> & newvals
@@ -822,9 +834,9 @@ void MO_matrix_quaternion::updateHessian(
  // static Array2 <doublevar> symmvals_temp(maxbasis,10);
 
   //References to make the code easier to read and slightly faster.
-  Array1 <int> & basismotmp(basismo_list(listnum));
-  Array2 <int> & basisfilltmp(basisfill_list(listnum));
-  Array2 <quaternion> & moCoefftmp(moCoeff_list(listnum));
+  Array1 <int> & basismotmp(basismo_list);
+  Array2 <int> & basisfilltmp(basisfill_list);
+  Array2 <quaternion> & moCoefftmp(moCoeff_list);
 
   Basis_function * tempbasis;
 
@@ -878,5 +890,5 @@ void MO_matrix_quaternion::updateHessian(
 
 
 
-#endif // MO_MATRIX_QUATERNION_H_INCLUDED
+#endif // SPINOR_MATRIX_QUATERNION_H_INCLUDED
 

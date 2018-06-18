@@ -144,7 +144,7 @@ public:
   //CM:
   void getElectronSpin(const int e, doublevar & s);
 
-  void setElectronSpin(const int e, const doublevar & s);
+  void setElectronSpin(const int e, const doublevar s);
 
 private:
 

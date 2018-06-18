@@ -1,3 +1,5 @@
+#ifndef ORBITAL_ROTATION_H
+#define ORBITAL_ROTATION_H
 #include <stdio.h>
 #include "Qmc_std.h"
 #include "Array.h"
@@ -217,3 +219,5 @@ Array3<log_value<T> > & detVal, Parm_deriv_return & deriv){
     }
   }//n loop
 }
+
+#endif

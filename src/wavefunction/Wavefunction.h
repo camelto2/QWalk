@@ -145,12 +145,14 @@ public:
 
   virtual void updateVal(Wavefunction_data *, Sample_point *)=0;
   virtual void updateLap(Wavefunction_data *, Sample_point *)=0;
+  virtual void updateSpinLap(Wavefunction_data *, Sample_point *);
 
   virtual void updateForceBias(Wavefunction_data *, Sample_point *);
 
   virtual void getVal(Wavefunction_data *, int, Wf_return &)=0;
 
   virtual void getLap(Wavefunction_data *, int, Wf_return &)=0;
+  virtual void getSpinLap(Wavefunction_data *, int, Wf_return &);
   virtual void getForceBias(Wavefunction_data *, int, Wf_return &);
 
   /*!

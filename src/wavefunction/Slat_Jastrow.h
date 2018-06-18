@@ -110,6 +110,10 @@ public:
 			       vector <string> &,
 			       string );
 
+  virtual void updateSpinLap(Wavefunction_data *, Sample_point *);
+
+  virtual void getSpinLap(Wavefunction_data *, int, Wf_return &);
+
 private:
   friend class Slat_Jastrow_data;
   Wavefunction * slater_wf;

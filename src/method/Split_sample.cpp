@@ -1338,11 +1338,11 @@ int Dynspin_sampler::split_driver(int e,
   sample->setElectronSpin(e, trace(depth).spin);
   trace(depth).sign=sample->overallSign();
   
-  if(wfdata->supports(laplacian_update) && wfdata->supports(spin_laplacian_update)) {
+  if(wfdata->supports(laplacian_update)) {
     wf->updateLap(wfdata, sample);
     wf->getLap(wfdata, e, trace(depth).lap);
     wf->updateSpinLap(wfdata, sample);
-    wf->getSpinLap(wfdata, e, trace(depth).spinlap;
+    wf->getSpinLap(wfdata, e, trace(depth).spinlap);
   }
   else {
     error("Must support laplacian_update for Dynspin_sample");
@@ -1361,7 +1361,7 @@ int Dynspin_sampler::split_driver(int e,
   //cout << "green_forward " << info.green_forward << endl;
   info.green_backward=exp(transition_prob(depth,0,timesteps(depth),dtype));
   info.diffusion_rate=diffusion_rate;
-  info.spin_diffusion_rate= = spin_diffusion_rate;
+  info.spin_diffusion_rate= spin_diffusion_rate;
   info.acceptance=acc;
   info.orig_pos=trace(0).pos;
   info.orig_spin=trace(0).spin;

@@ -168,7 +168,7 @@ public:
     error("getElectronSpin not implemented for HEG sample");
   }
   
-  void setElectronSpin(const int e, const doublevar & s) {
+  void setElectronSpin(const int e, const doublevar s) {
     error("setElectronSpin not implemented for HEG sample");
   }
 

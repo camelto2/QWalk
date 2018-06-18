@@ -43,6 +43,7 @@ class Guiding_function {
     condense to drift
    */
   virtual void getLap(Wf_return & lap, Array1 <doublevar> &)=0;
+  virtual void getSpinLap(Wf_return & lap, doublevar &)=0;
 
   /*!
     \brief
@@ -66,6 +67,8 @@ class Dmc_guiding_function:public Guiding_function {
                               int w)=0;
   virtual void getLap(Wf_return & lap, 
                       Array1 <doublevar> &)=0;
+  virtual void getSpinLap(Wf_return & lap, 
+                      doublevar &)=0;
   virtual doublevar getTrialRatio(Wf_return & wf1, 
                                   Wf_return & wf2)=0;
 
@@ -232,6 +235,12 @@ public:
       ret(d-1)=laps.amp(0,d);
     }
   }
+  virtual void getSpinLap(Wf_return & laps, doublevar & ret)
+  {
+
+    assert(laps.amp.GetDim(1)==3);
+    ret=laps.amp(0,1);
+  }
 
   virtual doublevar getTrialRatio(Wf_return & newfunc,
                                   Wf_return & oldfunc)
@@ -276,6 +285,12 @@ public:
     int max=min(ret.GetDim(0)+1, laps.amp.GetDim(1));
     for(int d=1; d< max; d++)
       ret(d-1)=laps.amp(0,d);
+  }
+
+  virtual void getSpinLap(Wf_return & laps, 
+                      doublevar & ret) {
+    assert(laps.amp.GetDim(1) ==3);
+    ret=laps.amp(0,1);
   }
 
   virtual doublevar getOperatorWeight(Wf_return & lap, int w) {
@@ -338,6 +353,20 @@ class Primary_noderelease:public Dmc_guiding_function {
 
     for(int d=1; d< max; d++)
       ret(d-1)=laps.amp(0,d)*factor;
+  }
+
+  virtual void getSpinLap(Wf_return & laps, 
+                      doublevar & ret) {
+    assert(laps.amp.GetDim(1) ==3);
+    doublevar factor;
+    if(alpha>0)
+      factor= 1.0/(1.0+exp(log(alpha)-2.0*laps.amp(0,0)));
+    else
+      factor=1;
+
+    //cout <<" getLap: factor "<<factor<<endl;
+
+    ret=laps.amp(0,1)*factor;
   }
 
   virtual doublevar getOperatorWeight(Wf_return & lap, int w) {

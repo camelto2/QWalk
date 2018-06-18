@@ -27,6 +27,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "Backflow_pf_wf_data.h"
 #include "Pfaff_wf_data.h"
 #include "BCS_wf_data.h"
+#include "Spinor_Slat_wf_data.h"
 #include "qmc_io.h"
 
 int allocate(vector <string> & wftext, System * sys, Wavefunction_data * & wfptr)
@@ -48,6 +49,8 @@ int allocate(vector <string> & wftext, System * sys, Wavefunction_data * & wfptr
     wfptr=new Pfaff_wf_data;
   else if(caseless_eq(wftext[0],"BCS"))
     wfptr=new BCS_wf_data;
+  else if (caseless_eq(wftext[0],"SPINORSLATER"))
+    wfptr=new Spinor_Slat_wf_data;
   else
     error("Error parsing the trial wavefunction section; unknown keyword ",
           wftext[0]);

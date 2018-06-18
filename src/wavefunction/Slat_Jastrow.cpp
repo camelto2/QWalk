@@ -358,6 +358,59 @@ void Slat_Jastrow::getLap(Wavefunction_data * wfdata, int e,
   }
 }
 
+void Slat_Jastrow::getSpinLap(Wavefunction_data * wfdata, int e,
+                          Wf_return & lap)
+{
+  assert(lap.amp.GetDim(0) >= nfunc_);
+  assert(lap.amp.GetDim(1) >= 3);
+  Slat_Jastrow_data * dataptr;
+  recast(wfdata, dataptr);
+  assert(dataptr != NULL);
+
+  Wf_return slat_lap(nfunc_,3);
+  Wf_return jast_lap(nfunc_,3);
+
+  slater_wf->getSpinLap(dataptr->slater, e, slat_lap);
+  //jastrow_wf->getSpinLap(dataptr->jastrow, e, jast_lap);
+  jastrow_wf->getVal(dataptr->jastrow, e, jast_lap);
+  for (int i=0; i < nfunc_; i++)
+  {
+      for (int d=1; d<3; d++) 
+      {
+	  jast_lap.amp(i,d)=0;
+	  jast_lap.phase(i,d)=0;
+	  jast_lap.cvals(i,d)=0;
+      }
+  }
+
+  //if ( slat_lap.is_complex==1 || jast_lap.is_complex==1 )
+  if ( slat_lap.is_complex==1)
+    lap.is_complex=1;
+
+  for(int i=0; i< nfunc_; i++)
+  {
+    lap.phase(i,0)=slat_lap.phase(i,0)+jast_lap.phase(i,0);
+    lap.amp(i,0)=slat_lap.amp(i,0)+jast_lap.amp(i,0);
+    doublevar dotproduct=0;
+    dcomplex dot(0.0, 0.0);
+    for(int d=1; d<4; d++)
+    {
+      lap.amp(i,d)=slat_lap.amp(i,d)+jast_lap.amp(i,d);
+      lap.phase(i,d)=slat_lap.phase(i,d)+jast_lap.phase(i,d);
+      dotproduct+=slat_lap.amp(i,d)*jast_lap.amp(i,d);
+
+      lap.cvals(i,d)=slat_lap.cvals(i,d)+jast_lap.cvals(i,d);
+      dot+=slat_lap.cvals(i,d)*jast_lap.cvals(i,d);
+    }
+
+    lap.amp(i,4)=slat_lap.amp(i,4)+jast_lap.amp(i,4)
+      +2*dotproduct;
+    lap.phase(i,4)=slat_lap.phase(i,4)+jast_lap.phase(i,4);
+
+    lap.cvals(i,4)=slat_lap.cvals(i,4)+jast_lap.cvals(i,4)
+      +2.0*dot;
+  }
+}
 
 //----------------------------------------------------------------------
 
@@ -377,6 +430,15 @@ void Slat_Jastrow::updateLap(Wavefunction_data * wfdata, Sample_point * sample)
   assert(dataptr != NULL);
   slater_wf->updateLap(dataptr->slater, sample);
   jastrow_wf->updateLap(dataptr->jastrow, sample);
+}
+
+void Slat_Jastrow::updateSpinLap(Wavefunction_data * wfdata, Sample_point * sample)
+{
+  Slat_Jastrow_data * dataptr;
+  recast(wfdata, dataptr);
+  assert(dataptr != NULL);
+  slater_wf->updateSpinLap(dataptr->slater, sample);
+//  jastrow_wf->updateSpinLap(dataptr->jastrow, sample);
 }
 
 void Slat_Jastrow::updateForceBias(Wavefunction_data * wfdata, Sample_point * sample)
