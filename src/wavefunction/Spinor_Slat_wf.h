@@ -1214,7 +1214,7 @@ template <class T> void Spinor_Slat_wf<T>::getDetSpinLap(int e, Array3<log_value
     }
     
     Array1 <log_value <T> > detgrads(ndet);
-    for(int i=1; i< 5; i++) {
+    for(int i=1; i< 3; i++) {
       if(!parent->use_clark_updates) {   //Sherman-Morrison updates
         for(int det=0; det < ndet; det++) {
           T temp=0;
