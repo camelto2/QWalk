@@ -1093,9 +1093,10 @@ doublevar Dynspin_sampler::transition_prob(int point1, int point2,
   //for the moment I am not worrying about limiting the spin drift
   //can easily be done later
   
-  prob-=(trace(point2).spin-trace(point1).spin-trace(point1).spin_drift)
-       *(trace(point2).spin-trace(point1).spin-trace(point1).spin_drift)
-       /(2.0*timestep/spin_mass);
+  if (spin_mass != INFINITY)
+    prob-=(trace(point2).spin-trace(point1).spin-trace(point1).spin_drift)
+         *(trace(point2).spin-trace(point1).spin-trace(point1).spin_drift)
+         /(2.0*timestep/spin_mass);
   
   return prob;
 }
@@ -1122,7 +1123,6 @@ void Dynspin_sampler::read(vector <string> & words) {
 
   if(!readvalue(words, pos=0, spin_mass, "SPIN_MASS")) 
       error("Need to set SPIN_MASS");
-
 }
 
 doublevar Dynspin_sampler::get_acceptance(Guiding_function * guidingwf, 
@@ -1217,10 +1217,12 @@ doublevar Dynspin_sampler::linear_symm(Point & p1, Point & p2,
   }
   green_forward *= -0.5/timestep;
 
-  doublevar spin_tau = timestep/spin_mass;
-  green_forward-=((p2.spin-p1.spin)*(p2.spin-p1.spin)
-    +(p2.spin-p1.spin)*(p2.spin_drift-p1.spin_drift)
-    +.5*(p2.spin_drift*p2.spin_drift+p1.spin_drift*p1.spin_drift))/(2.0*spin_tau);
+  if (spin_mass != INFINITY) {
+    doublevar spin_tau = timestep/spin_mass;
+    green_forward-=((p2.spin-p1.spin)*(p2.spin-p1.spin)
+      +(p2.spin-p1.spin)*(p2.spin_drift-p1.spin_drift)
+      +.5*(p2.spin_drift*p2.spin_drift+p1.spin_drift*p1.spin_drift))/(2.0*spin_tau);
+  }
 
   return green_forward;
 }
