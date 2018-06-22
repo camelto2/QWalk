@@ -76,6 +76,7 @@ public:
   ~Spinor_Slat_wf_data()
   {
     if(molecorb != NULL ) delete molecorb;
+    if(cmolecorb != NULL) delete cmolecorb;
   }
 
   int optimize_mo; //!< whether to optimize MO basis
