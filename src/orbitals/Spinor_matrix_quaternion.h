@@ -550,7 +550,7 @@ int Spinor_matrix_quaternion::showinfo(ostream & os)
 
 int Spinor_matrix_quaternion::writeinput(string & indent, ostream & os)
 {
-  os << indent << "CUTOFF_MO" << endl;
+  os << indent << "QUATERNION_MO" << endl;
   os << indent << "NMO " << nmo << endl;
   os << indent << "ORBFILE " << orbfile << endl;
   //if(oldsofile!="") 
