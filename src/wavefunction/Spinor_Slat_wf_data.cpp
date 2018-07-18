@@ -421,7 +421,7 @@ int Spinor_Slat_wf_data::writeinput(string & indent, ostream & os) {
   if(!genmolecorb)
     error("Spinor_Slat_wf_data::writeinput() : Molecular orbital not allocated");
 
-  os << indent << "SPINOR_SLATER" << endl;
+  os << indent << "SPINORSLATER" << endl;
 
   if(optimize_det)
     os << indent << "OPTIMIZE_DET" << endl;
