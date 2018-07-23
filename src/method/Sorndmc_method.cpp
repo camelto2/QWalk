@@ -123,6 +123,9 @@ void Sorndmc_method::read(vector <string> words,
 
   low_io=0;
   if(haskeyword(words, pos=0,"LOW_IO")) low_io=1;
+
+  if (!readsection(words, pos=0,guiding_words, "GUIDING_WF"))
+      error("Must include GUIDING_WF");
   
   allocate(dynamics_words, dyngen);
 
@@ -140,10 +143,8 @@ int Sorndmc_method::generateVariables(Program_options & options) {
   have_allocated_variables=1;
   allocate(options.systemtext[0], mysys);
   mysys->generatePseudo(options.pseudotext, mypseudo);
-  if (options.twftext.size() != 2)
-      error("Need 2 trial wave functions. First is Psi_T, whereas the second is Psi_G");
   allocate(options.twftext[0], mysys, mywfdata); //In system file, first set spins
-  allocate(options.twftext[1], mysys, mygwfdata);
+  allocate(guiding_words, mysys, mygwfdata);
   
   densplt.Resize(dens_words.size());
   for(int i=0; i< densplt.GetDim(0); i++) {

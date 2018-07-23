@@ -202,6 +202,7 @@ public:
   vector <vector <string> > nldens_words;
   Array1 < Average_generator * > average_var;
   vector <vector <string> > avg_words;
+  vector <string> guiding_words;
 };
 
 
