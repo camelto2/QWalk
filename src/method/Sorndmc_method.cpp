@@ -334,6 +334,9 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
   cout.precision(15);
   output.precision(10);
 
+  ofstream maxEnt;
+  maxEnt.open(log_label+"_maxEnt.dat");
+
   
   prop.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
 	       wfdata); 
@@ -345,12 +348,22 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
   myprop_absolute.initializeLog(average_var);
   
   // Get signs from the trial wave function
-  for(int walker=0; walker < nconfig; walker++)
+  Array1<doublevar> walk_en_psiG(nconfig);
+  Array1<doublevar> ini_en_psiT(nconfig);
+  Array1<doublevar> ini_ratio(nconfig);
+  for(int walker=0; walker < nconfig; walker++) {
     pts(walker).sign=pts(walker).prop.wf_val.sign(0);
+    walk_en_psiG(walker) = pts(walker).gprop.energy(0);
+    ini_en_psiT(walker) = pts(walker).prop.energy(0);
+    ini_ratio(walker) = exp(pts(walker).prop.wf_val.amp(0,0) - pts(walker).gprop.wf_val.amp(0,0));
+  }
 
   nhist=1;
   
   doublevar teff=timestep;
+  doublevar time = 0.0;
+  int total_config = parallel_sum(nconfig);
+
   for(int block=0; block < nblock; block++) {
 
     int totkilled=0;  
@@ -474,6 +487,8 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
 	  //CM We are trying to do normal DMC, but now guiding function is used for weights. Need to update with PSI_G,
 	  pts(walker).weight*=getWeight(pts(walker),teff,etrial); //cummulative walker weight for branch process
 
+	  walk_en_psiG(walker) += pts(walker).gprop.energy(0);
+
 
           if(pts(walker).ignore_walker) {
             pts(walker).ignore_walker=0;
@@ -530,6 +545,19 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
       
       totkilled+=nkilled;
       totbranch+=nkilled;
+
+      time += timestep;
+      doublevar h0 = 0.0;
+      doublevar h1 = 0.0;
+      for (int walker = 0; walker < nconfig; walker++) {
+	  doublevar ratio = exp(pts(walker).prop.wf_val.amp(0,0)-pts(walker).gprop.wf_val.amp(0,0));
+	  h0 += ini_ratio(walker)*ratio*exp(-timestep*walk_en_psiG(walker));
+	  h1 += ini_ratio(walker)*ratio*(0.5*(ini_en_psiT(walker)+pts(walker).prop.energy(0)))*exp(-timestep*walk_en_psiG(walker));
+      }
+      doublevar total_h0 = parallel_sum(h0)/total_config;
+      doublevar total_h1 = parallel_sum(h1)/total_config;
+      single_write(maxEnt,time,total_h0,total_h1);
+
     }
 
     ///----Finished block
@@ -615,6 +643,8 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
   wfdata->clearObserver();
   gwfdata->clearObserver();
   deallocateIntermediateVariables();
+
+  maxEnt.close();
 }
 
 
