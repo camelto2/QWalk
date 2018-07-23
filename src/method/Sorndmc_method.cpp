@@ -334,8 +334,8 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
   cout.precision(15);
   output.precision(10);
 
-  ofstream maxEnt;
-  maxEnt.open(log_label+"_maxEnt.dat");
+  string maxEntname = log_label+"_maxEnt.dat";
+  ofstream maxEnt(maxEntname.c_str());
 
   
   prop.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
