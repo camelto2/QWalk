@@ -558,15 +558,13 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
 
         pts(walker).config_pos.savePos(sample);
 
-	if (max_nodal_cross_age != 0) {
-	  if (pts(walker).sign*pts(walker).prop.wf_val.sign(0) > 0)
-	      pts(walker).nodal_cross_age = 0;
-	  else
-	      pts(walker).nodal_cross_age += 1;
+	if (pts(walker).sign*pts(walker).prop.wf_val.sign(0) > 0)
+	  pts(walker).nodal_cross_age = 0;
+	else
+	  pts(walker).nodal_cross_age += 1;
 
-	  if (pts(walker).nodal_cross_age >= max_nodal_cross_age) 
-	     pts(walker).sign *= -1;
-	}
+	if (pts(walker).nodal_cross_age >= max_nodal_cross_age && max_nodal_cross_age > 0) 
+	  pts(walker).sign *= -1;
 
       }
       //---Finished moving all walkers
