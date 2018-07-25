@@ -104,9 +104,9 @@ public:
   int showinfo(ostream & os);
  private:
 
-  Properties_manager myprop;
+  Properties_manager myprop_f;
   Properties_gather mygather;
-  Properties_manager myprop_absolute;
+  Properties_manager myprop_b;
 
 
 

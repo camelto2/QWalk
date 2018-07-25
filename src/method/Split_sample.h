@@ -117,6 +117,7 @@ class Dynamics_generator {
   virtual int showinfo(string & indent, ostream & os)=0;
   virtual void showStats(ostream & os)=0;
   virtual  void resetStats()=0;
+  virtual doublevar get_accept()=0;
 
 
   virtual ~Dynamics_generator() {}
@@ -207,6 +208,14 @@ class Split_sampler:public Dynamics_generator {
   
   void showStats(ostream & os);
   void resetStats();
+
+  doublevar get_accept() {
+      doublevar totacc=0;
+      for(int i=0; i < recursion_depth_; i++)
+	  totacc+=acceptances(i);
+      return totacc/tries(0);
+  }
+
  private:
  
   doublevar transition_prob(int point1, int point2,
@@ -273,6 +282,11 @@ class UNR_sampler:public Dynamics_generator {
 
   void showStats(ostream & os);
   void resetStats();
+
+  doublevar get_accept() {
+      return acceptance/tries;
+  }
+
  private:
   doublevar acceptance;
   long int tries;
@@ -318,6 +332,11 @@ class SRK_dmc:public Dynamics_generator {
       acceptances=0; tries=0;
       retries=0; nbottom=0;
     }
+
+  doublevar get_accept() {
+      error("Not implemented");
+  }
+
   private:
     int rk_step(int e, Sample_point * sample, 
         Wavefunction * wf,Wavefunction_data * wfdata, 
@@ -429,6 +448,14 @@ class Dynspin_sampler:public Dynamics_generator {
   
   void showStats(ostream & os);
   void resetStats();
+
+  doublevar get_accept() {
+      doublevar totacc=0;
+      for(int i=0; i < recursion_depth_; i++)
+	  totacc+=acceptances(i);
+      return totacc/tries(0);
+  }
+  
  private:
  
   doublevar transition_prob(int point1, int point2,

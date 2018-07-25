@@ -50,8 +50,10 @@ void Sorndmc_method::read(vector <string> words,
   if(!readvalue(words, pos=0, nconfig, "NCONFIG"))
     nconfig=max(2048/mpi_info.nprocs,1);
 
-  if(!readvalue(words, pos=0, nstep, "NSTEP"))
-    nstep=max(int(1.0/timestep+0.5),1);
+  if(!readvalue(words, pos=0, nstep, "NSTEP")) 
+    nstep=1;
+  else
+    error("Number of steps is set to 1 in RNDMC");
   
   if(!readvalue(words, pos=0, readconfig, "READCONFIG"))
       //CM
@@ -143,7 +145,7 @@ int Sorndmc_method::generateVariables(Program_options & options) {
   have_allocated_variables=1;
   allocate(options.systemtext[0], mysys);
   mysys->generatePseudo(options.pseudotext, mypseudo);
-  allocate(options.twftext[0], mysys, mywfdata); //In system file, first set spins
+  allocate(options.twftext[0], mysys, mywfdata); 
   allocate(guiding_words, mysys, mygwfdata);
   
   densplt.Resize(dens_words.size());
@@ -290,27 +292,27 @@ void Sorndmc_method::find_cutoffs() {
 void Sorndmc_method::run(Program_options & options, ostream & output) {
   if(!have_allocated_variables) 
     error("Must generate variables to use Sorndmc_method::run");
-  string logfile=options.runid+".log";
-  string logfile2=options.runid+"_abs_weights.log";
+  string logfile=options.runid+".fermionic.log";
+  string logfile2=options.runid+".bosonic.log";
   
   if(mpi_info.node==0 ) {
     ofstream logout(logfile.c_str(), ios::app);
     logout << "#-------------------------------------------------\n";
-    logout << "#SORNDMC run: timestep " << timestep 
+    logout << "#SORNDMC fermionic: timestep " << timestep 
            << endl;
     logout << "#-------------------------------------------------\n\n\n";
     logout.close();
     ofstream logout2(logfile2.c_str(), ios::app);
     logout2 << "#-------------------------------------------------\n";
-    logout2 << "#SORNDMC run: absolute weights, timestep " << timestep 
+    logout2 << "#SORNDMC bosonic: timestep " << timestep 
            << endl;
     logout2 << "#-------------------------------------------------\n\n\n";
     logout2.close();
   }
 
-  myprop.setLog(logfile, log_label);
-  myprop_absolute.setLog(logfile2, log_label);
-  runWithVariables(myprop, mysys, mywfdata, mygwfdata, mypseudo,output);
+  myprop_f.setLog(logfile, log_label);
+  myprop_b.setLog(logfile2, log_label);
+  runWithVariables(myprop_f, mysys, mywfdata, mygwfdata, mypseudo,output);
 }
 
 //----------------------------------------------------------------------
@@ -337,15 +339,18 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
   string maxEntname = log_label+"_maxEnt.dat";
   ofstream maxEnt(maxEntname.c_str());
 
+  string stats_name = log_label+"_accept_efficiency.dat";
+  ofstream stats(stats_name.c_str());
+
   
   prop.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
 	       wfdata); 
-  myprop_absolute.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
+  myprop_b.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
 	       wfdata); 
 
   restorecheckpoint(readconfig, sys, wfdata, gwfdata, pseudo);
   prop.initializeLog(average_var);
-  myprop_absolute.initializeLog(average_var);
+  myprop_b.initializeLog(average_var);
   
   // Get signs from the trial wave function
   Array1<doublevar> walk_en_psiG(nconfig);
@@ -503,6 +508,7 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
           //pts(walker).prop.weight=pts(walker).weight;
 	  //multiply the property weight by the accumulated walker weight.
           pts(walker).prop.weight(0)*=pts(walker).weight;
+	  pts(walker).gprop.weight(0)*=pts(walker).weight;
           //This is somewhat inaccurate..will need to change it later
           //For the moment, the autocorrelation will be slightly
           //underestimated
@@ -510,17 +516,22 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
           pts(walker).prop.nchildren=1;
           pts(walker).prop.children(0)=walker;
           pts(walker).prop.avgrets.Resize(1,average_var.GetDim(0));
+
+	  pts(walker).gprop.parent=walker;
+	  pts(walker).gprop.nchildren=1;
+	  pts(walker).gprop.children(0)=walker;
+
           for(int i=0; i< average_var.GetDim(0); i++) { 
             average_var(i)->evaluate(wfdata, wf, sys, sample, pts(walker).prop.avgrets(0,i));
           }
 
-	  Properties_point tmp_prop_absolute;
-	  tmp_prop_absolute = pts(walker).prop;
-	  tmp_prop_absolute.weight(0) = fabs(pts(walker).prop.weight(0));
+	  //Properties_point tmp_prop_absolute;
+	  //tmp_prop_absolute = pts(walker).prop;
+	  //tmp_prop_absolute.weight(0) = fabs(pts(walker).prop.weight(0));
 
 	  //Insert current properties for averaging
           prop.insertPoint(step+p, walker, pts(walker).prop);
-          myprop_absolute.insertPoint(step+p, walker, tmp_prop_absolute);
+          myprop_b.insertPoint(step+p, walker, pts(walker).gprop);
           for(int i=0; i< densplt.GetDim(0); i++)
             densplt(i)->accumulate(sample,pts(walker).prop.weight(0));
           for(int i=0; i< nldensplt.GetDim(0); i++)
@@ -571,12 +582,12 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
     }
 
     prop.endBlock();
-    myprop_absolute.endBlock();
+    myprop_b.endBlock();
 
     Properties_block lastblock;
     Properties_block lastblock2;
     prop.getLastBlock(lastblock);
-    myprop_absolute.getLastBlock(lastblock2);
+    myprop_b.getLastBlock(lastblock2);
     doublevar efficiency;
     doublevar weight = lastblock.avg(Properties_types::weight,0);
     doublevar weight_abs = lastblock2.avg(Properties_types::weight,0);
@@ -589,7 +600,7 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
     Properties_final_average finavg;
     Properties_final_average finavg2;
     prop.getFinal(finavg);
-    myprop_absolute.getFinal(finavg2);
+    myprop_b.getFinal(finavg2);
     eref=finavg.avg(Properties_types::total_energy,0);
     updateEtrial(feedback);
     
@@ -632,6 +643,10 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
       output << "RN efficiency: " <<  efficiency << endl;
     }
 
+    doublevar acc = dyngen->get_accept();
+    single_write(stats,time,"  ",acc);
+    single_write(stats,"  ",efficiency,"\n");
+
     dyngen->resetStats();
 
   }
@@ -645,6 +660,7 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
   deallocateIntermediateVariables();
 
   maxEnt.close();
+  stats.close();
 }
 
 
