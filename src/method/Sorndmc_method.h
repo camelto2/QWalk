@@ -107,6 +107,7 @@ public:
   Properties_manager myprop_f;
   Properties_gather mygather;
   Properties_manager myprop_b;
+  Properties_manager myprop_a; //absolute
 
 
 

@@ -294,6 +294,7 @@ void Sorndmc_method::run(Program_options & options, ostream & output) {
     error("Must generate variables to use Sorndmc_method::run");
   string logfile=options.runid+".fermionic.log";
   string logfile2=options.runid+".bosonic.log";
+  string logfile3=options.runid+".absolute.log";
   
   if(mpi_info.node==0 ) {
     ofstream logout(logfile.c_str(), ios::app);
@@ -308,10 +309,17 @@ void Sorndmc_method::run(Program_options & options, ostream & output) {
            << endl;
     logout2 << "#-------------------------------------------------\n\n\n";
     logout2.close();
+    ofstream logout3(logfile3.c_str(), ios::app);
+    logout3 << "#-------------------------------------------------\n";
+    logout3 << "#SORNDMC absolute: timestep " << timestep 
+	   << endl;
+    logout3 << "#-------------------------------------------------\n\n\n";
+    logout3.close();
   }
 
   myprop_f.setLog(logfile, log_label);
   myprop_b.setLog(logfile2, log_label);
+  myprop_a.setLog(logfile3, log_label);
   runWithVariables(myprop_f, mysys, mywfdata, mygwfdata, mypseudo,output);
 }
 
@@ -347,10 +355,13 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
 	       wfdata); 
   myprop_b.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
 	       wfdata); 
+  myprop_a.setSize(wf->nfunc(), nblock, nstep, nconfig, sys, 
+	       wfdata); 
 
   restorecheckpoint(readconfig, sys, wfdata, gwfdata, pseudo);
   prop.initializeLog(average_var);
   myprop_b.initializeLog(average_var);
+  myprop_a.initializeLog(average_var);
   
   // Get signs from the trial wave function
   Array1<doublevar> walk_en_psiG(nconfig);
@@ -525,13 +536,14 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
             average_var(i)->evaluate(wfdata, wf, sys, sample, pts(walker).prop.avgrets(0,i));
           }
 
-	  //Properties_point tmp_prop_absolute;
-	  //tmp_prop_absolute = pts(walker).prop;
-	  //tmp_prop_absolute.weight(0) = fabs(pts(walker).prop.weight(0));
+	  Properties_point tmp_prop_absolute;
+	  tmp_prop_absolute = pts(walker).prop;
+	  tmp_prop_absolute.weight(0) = fabs(pts(walker).prop.weight(0));
 
 	  //Insert current properties for averaging
           prop.insertPoint(step+p, walker, pts(walker).prop);
           myprop_b.insertPoint(step+p, walker, pts(walker).gprop);
+	  myprop_a.insertPoint(step+p, walker, tmp_prop_absolute);
           for(int i=0; i< densplt.GetDim(0); i++)
             densplt(i)->accumulate(sample,pts(walker).prop.weight(0));
           for(int i=0; i< nldensplt.GetDim(0); i++)
@@ -583,14 +595,17 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
 
     prop.endBlock();
     myprop_b.endBlock();
+    myprop_a.endBlock();
 
     Properties_block lastblock;
     Properties_block lastblock2;
+    Properties_block lastblock3;
     prop.getLastBlock(lastblock);
     myprop_b.getLastBlock(lastblock2);
+    myprop_a.getLastBlock(lastblock3);
     doublevar efficiency;
     doublevar weight = lastblock.avg(Properties_types::weight,0);
-    doublevar weight_abs = lastblock2.avg(Properties_types::weight,0);
+    doublevar weight_abs = lastblock3.avg(Properties_types::weight,0);
     efficiency = weight/weight_abs;
 
     totbranch=parallel_sum(totbranch);
@@ -599,8 +614,10 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
 
     Properties_final_average finavg;
     Properties_final_average finavg2;
+    Properties_final_average finavg3;
     prop.getFinal(finavg);
     myprop_b.getFinal(finavg2);
+    myprop_a.getFinal(finavg3);
     eref=finavg.avg(Properties_types::total_energy,0);
     updateEtrial(feedback);
     
