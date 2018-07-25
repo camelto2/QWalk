@@ -1187,7 +1187,7 @@ void Rndmc_point::write(ostream & os) {
   //prop.write(indent,os);
   os << "weight " << weight<< endl;
   os << "sign " << sign << endl;
-  os << "nodal_cross_age" << nodal_cross_age << endl;
+  os << "nodal_cross_age " << nodal_cross_age << endl;
   /*
   for(deque<Dmc_history>::iterator i=past_energies.begin(); 
       i!=past_energies.end(); i++) { 
