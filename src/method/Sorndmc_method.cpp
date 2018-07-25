@@ -579,7 +579,8 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
       }
       doublevar total_h0 = parallel_sum(h0)/total_config;
       doublevar total_h1 = parallel_sum(h1)/total_config;
-      single_write(maxEnt,time,total_h0,total_h1);
+      single_write(maxEnt,time,"  ",total_h0);
+      single_write(maxEnt,"  ",total_h1,"\n");
 
     }
 
