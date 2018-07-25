@@ -40,6 +40,15 @@ class Program_options;
 struct Rndmc_point: Dmc_point {
     deque <Dmc_history> gpast_energies;
     Properties_point gprop;
+    int nodal_cross_age;
+    void read(istream & is);
+    void write(ostream & os);
+    Rndmc_point() {
+	weight = 1;
+	ignore_walker = 0;
+	sign = 1;
+	nodal_cross_age = 0;
+    }
 };
 
 class Sorndmc_method : public Qmc_avg_method
@@ -204,6 +213,9 @@ public:
   Array1 < Average_generator * > average_var;
   vector <vector <string> > avg_words;
   vector <string> guiding_words;
+
+  int max_nodal_cross_age;
+
 };
 
 

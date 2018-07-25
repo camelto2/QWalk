@@ -128,7 +128,10 @@ void Sorndmc_method::read(vector <string> words,
 
   if (!readsection(words, pos=0,guiding_words, "GUIDING_WF"))
       error("Must include GUIDING_WF");
-  
+
+  if(!readvalue(words, pos=0, nblock, "MAX_NODAL_CROSS_AGE"))
+      max_nodal_cross_age = 0;
+
   allocate(dynamics_words, dyngen);
 
 }
@@ -500,6 +503,7 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
 	  pts(walker).prop.weight(0)*=exp(pts(walker).prop.wf_val.amp(0,0)-pts(walker).gprop.wf_val.amp(0,0)); // |psiT/psiG|
 	  pts(walker).prop.weight(0)*=pts(walker).sign*pts(walker).prop.wf_val.sign(0); // s_i * sign(psiT)
 
+
 	  //CM We are trying to do normal DMC, but now guiding function is used for weights. Need to update with PSI_G,
 	  pts(walker).weight*=getWeight(pts(walker),teff,etrial); //cummulative walker weight for branch process
 
@@ -553,6 +557,17 @@ void Sorndmc_method::runWithVariables(Properties_manager & prop,
         }
 
         pts(walker).config_pos.savePos(sample);
+
+	if (max_nodal_cross_age != 0) {
+	  if (pts(walker).sign*pts(walker).prop.wf_val.sign(0) > 0)
+	      pts(walker).nodal_cross_age = 0;
+	  else
+	      pts(walker).nodal_cross_age += 1;
+
+	  if (pts(walker).nodal_cross_age >= max_nodal_cross_age) 
+	     pts(walker).sign *= -1;
+	}
+
       }
       //---Finished moving all walkers
 
@@ -1143,3 +1158,51 @@ int Sorndmc_method::calcBranch() {
 }
 //----------------------------------------------------------------------
 
+void Rndmc_point::read(istream & is) { 
+  config_pos.read(is);
+  int filepos=is.tellg();
+  string dum;
+  is >> dum;
+  if(!caseless_eq(dum, "SORNDMC") or !caseless_eq(dum, "DMC")) {
+    is.seekg(filepos);
+    return;
+  }
+  
+  if (caseless_eq(dum, "SORNDMC")) {
+    is >> dum; //the {
+    is >> dum >> weight;
+    is >> dum >> sign;
+    is >> dum >> nodal_cross_age;
+    
+  }
+  else if (caseless_eq(dum, "DMC")) {
+    is >> dum; //the {
+    is >> dum >> weight;
+    is >> dum >> sign;
+  }
+}
+
+void Rndmc_point::write(ostream & os) { 
+  string indent="";
+  config_pos.write(os);
+  os << "SORNDMC { \n";
+  //prop.write(indent,os);
+  os << "weight " << weight<< endl;
+  os << "sign " << sign << endl;
+  os << "nodal_cross_age" << nodal_cross_age << endl;
+  /*
+  for(deque<Dmc_history>::iterator i=past_energies.begin(); 
+      i!=past_energies.end(); i++) { 
+    os << "past_energies { ";
+    i->write(os);
+    os << "}\n";    
+  }
+  for(deque<Dmc_history_avgrets>::iterator i=past_properties.begin(); 
+      i!=past_properties.end(); i++) {
+    os << "past_properties { ";
+    i->write(os);
+    os << "}\n";
+  }
+   */
+  os << "}\n";
+}
