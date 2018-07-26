@@ -1161,7 +1161,7 @@ void Rndmc_point::read(istream & is) {
   int filepos=is.tellg();
   string dum;
   is >> dum;
-  if(!caseless_eq(dum, "SORNDMC") or !caseless_eq(dum, "DMC")) {
+  if(!caseless_eq(dum, "SORNDMC") && !caseless_eq(dum, "DMC")) {
     is.seekg(filepos);
     return;
   }
