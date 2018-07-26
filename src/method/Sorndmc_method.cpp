@@ -129,7 +129,7 @@ void Sorndmc_method::read(vector <string> words,
   if (!readsection(words, pos=0,guiding_words, "GUIDING_WF"))
       error("Must include GUIDING_WF");
 
-  if(!readvalue(words, pos=0, nblock, "MAX_NODAL_CROSS_AGE"))
+  if(!readvalue(words, pos=0, max_nodal_cross_age, "MAX_NODAL_CROSS_AGE"))
       max_nodal_cross_age = 0;
 
   allocate(dynamics_words, dyngen);
