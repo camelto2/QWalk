@@ -893,10 +893,9 @@ template <class T> inline void Spinor_Slat_wf<T>::updateVal( Spinor_Slat_wf_data
 
   //update all the mo's that we will be using.
   molecorb->updateVal(sample,e,updatedMoVal);
-  molecorb->updateSpinVal(sample,e,updatedMoSpinVal);
   for(int i=0; i< updatedMoVal.GetDim(0); i++) {
     moVal(0,e,i)=updatedMoVal(i,0);
-    moSpinVal(0,e,i)=updatedMoSpinVal(i,0);
+    moSpinVal(0,e,i)=updatedMoVal(i,0);
   }
 
 

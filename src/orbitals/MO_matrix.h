@@ -119,14 +119,6 @@ public:
   )
   { error("Must pass spin index. This is only used for spinor orbitals"); }
 
-  virtual void updateSpinVal(
-    Sample_point * sample,
-    int e,
-    //!< electron number
-    Array2 <T> & newvals
-    //!< The return: in form (MO)
-  ) { error("updateSpinVal not implemented"); }
-
   virtual void updateLap(
     Sample_point * sample,
     int e,
