@@ -35,6 +35,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "Rotate_orbs.h"
 #include "Lowdin_method.h"
 #include "Maximize_method.h"
+#include "NodeSVM_method.h"
 
 int allocate(vector <string> & words,
              Program_options & options,
@@ -88,6 +89,9 @@ int allocate(vector <string> & words,
     methptr=new Lowdin_method;
   else if(caseless_eq(words[0],"MAXIMIZE"))
     methptr=new Maximize_method;
+
+  else if(caseless_eq(words[0],"NODESVM"))
+    methptr=new NodeSVM_method;
   
   
   else
