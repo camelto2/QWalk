@@ -595,7 +595,7 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
 
 
   //Dipole contribution
-  Array1 <doublevar> polarization;
+  Array1 <doublevar> polarization(3);
   for (int d = 0; d < 3; d++)
       polarization(d) = ion_polarization(d)+el_polarization(d);
   doublevar dot=0;
@@ -985,12 +985,11 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   }
 
 
-  Array1 <doublevar> elec_pos(3);
+  el_polarization.Resize(3);
   el_polarization = 0.0;
   for (int e=0; e < totnelectrons; e++) {
-      sample->getElectronPos(e,elec_pos);
       for(int d=0; d<3; d++)
-          el_polarization(d) -= elec_pos(d);
+          el_polarization(d) -= elecpos(e,d);
   }
   return elecElec_real + elecIon_real + elecElec_recip+elecIon_recip;
 }
