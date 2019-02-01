@@ -5,4 +5,5 @@ INCLUDEPATH:=-I$(DVLPATH)/basis_function \
          -I$(DVLPATH)/program_utils\
          -I$(DVLPATH)/properties \
          -I$(DVLPATH)/system \
-         -I$(DVLPATH)/wavefunction
+         -I$(DVLPATH)/wavefunction \
+         -I$(DLIB_INCLUDE)

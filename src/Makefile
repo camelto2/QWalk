@@ -6,6 +6,7 @@ PLATFORM = $(shell uname -s)
 DVLPATH = $(shell pwd)
 INSTALLPATH = $(DVLPATH)/../bin/
 QWALK_VERSION = $(shell git describe)
+DLIB_INCLUDE = /home/camelto2/dlib-19.16
 
 ####################################################################
 # Derived paths, all relative to the base path.  These shouldn't
@@ -26,6 +27,7 @@ include program_utils/make.include
 include properties/make.include
 include system/make.include
 include wavefunction/make.include
+include make.dlib
 
 #remove the directory prefix and .cpp extension, and add the .o extension
 OBJS:= $(addprefix $(OBJPATH)/,$(addsuffix .o,$(notdir $(basename $(SOURCES)))))

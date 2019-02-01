@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "NodeSVM_method.h"
 #include "qmc_io.h"
 #include "Wf_return.h"
+#include <dlib/svm.h>
 
 void NodeSVM_method::read(vector<string> words,
                           unsigned int & pos,
