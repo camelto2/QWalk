@@ -601,7 +601,7 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
   doublevar dot=0;
   for (int d = 0; d < 3; d++)
       dot += polarization(d)*polarization(d);
-  doublevar dipole = 2*pi/cellVolume * dot;
+  doublevar dipole = 2*pi/(3*cellVolume)* dot;
 
 
 
@@ -985,8 +985,8 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
   }
 
 
-  Array1 <double> elec_pos(3);
-  el_polarization = 0;
+  Array1 <doublevar> elec_pos(3);
+  el_polarization = 0.0;
   for (int e=0; e < totnelectrons; e++) {
       sample->getElectronPos(e,elec_pos);
       for(int d=0; d<3; d++)
