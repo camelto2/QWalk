@@ -591,7 +591,21 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
   //cout << " ewalde " << ewalde << " xc_correction " << xc_correction << endl;
   //we do not want the xc_correction in the total energy in order to compare 
   //to all other qmc codes, it is still printed out so can be added by hand 
-  return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
+  //
+
+
+  //Dipole contribution
+  Array1 <doublevar> polarization;
+  for (int d = 0; d < 3; d++)
+      polarization(d) = ion_polarization(d)+el_polarization(d);
+  doublevar dot=0;
+  for (int d = 0; d < 3; d++)
+      dot += polarization(d)*polarization(d);
+  doublevar dipole = 2*pi/cellVolume * dot;
+
+
+
+  return ion_ewald+self_ii+self_ee+self_ei+ewalde + dipole; //+xc_correction;
 }
 
 
@@ -968,6 +982,15 @@ doublevar Periodic_system::ewaldElectron(Sample_point * sample) {
     //ewalde_separated(e) = elecElec_real_separated(e) 
     //  + 2.0*(elecElec_recip_separated(e)); 
         //noted that the elecElec_recip_separated term already removed the self interaction term; 
+  }
+
+
+  Array1 <double> elec_pos(3);
+  el_polarization = 0;
+  for (int e=0; e < totnelectrons; e++) {
+      sample->getElectronPos(e,elec_pos);
+      for(int d=0; d<3; d++)
+          el_polarization(d) -= elec_pos(d);
   }
   return elecElec_real + elecIon_real + elecElec_recip+elecIon_recip;
 }

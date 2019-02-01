@@ -208,6 +208,7 @@ private:
   doublevar ewaldElectron(Sample_point * sample);
   doublevar minDistance(Array1 <doublevar> pos1, Array1 <doublevar> pos2, Array1 <doublevar> &rmin ); 
   Array1 <doublevar> ion_polarization;
+  Array1 <doublevar> el_polarization;
 };
 
 
