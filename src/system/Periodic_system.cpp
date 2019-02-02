@@ -595,15 +595,65 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
 
 
   //Dipole contribution
-  Array1 <doublevar> polarization(3);
-  for (int d = 0; d < 3; d++)
-      polarization(d) = ion_polarization(d)+el_polarization(d);
-  doublevar dot=0;
-  for (int d = 0; d < 3; d++)
-      dot += polarization(d)*polarization(d);
-  doublevar dipole = 2*pi/(3*cellVolume)* dot;
+  //Array1 <doublevar> polarization(3);
+  //for (int d = 0; d < 3; d++)
+  //    polarization(d) = ion_polarization(d)+el_polarization(d);
+  //doublevar dot=0;
+  //for (int d = 0; d < 3; d++)
+  //    dot += polarization(d)*polarization(d);
+  //doublevar dipole = 2*pi/(3*cellVolume)* dot;
+  //
 
+  Array2<doublevar> elecpos(totnelectrons,3);
+  sample->getAllElectronPos(elecpos);
 
+  int natoms = ions.size();
+  Array1<doublevar> ion_pos1(3);
+  Array1<doublevar> ion_pos2(3);
+  doublevar dipole = 0;
+  //ion-ion
+  for (int at1 = 0; at1 < natoms; at1++) 
+  {
+      getIonPos(at1,ion_pos1);
+      for (int at2 = 0; at2 < natoms; at2++)
+      {
+          getIonPos(at2,ion_pos2);
+          doublevar dot = 0;
+          for (int d = 0; d < 3; d++)
+          {
+              dot += (ion_pos1(d)-ion_pos2(d))*(ion_pos1(d)-ion_pos2(d));
+          }
+          dipole += ions.charge(at1)*ions.charge(at2)*dot;
+      }
+  }
+  //el-el
+  for (int e1=0; e1<totnelectrons; e1++)
+  {
+      for (int e2=0; e2 < totnelectrons; e2++)
+      {
+          doublevar dot = 0;
+          for (int d = 0; d < 3; d++)
+          {
+              dot += (elecpos(e1,d)-elecpos(e2,d))*(elecpos(e1,d)-elecpos(e2,d));
+          }
+          dipole += dot;
+      }
+  }
+  //el-ion
+  for (int at = 0; at < natoms; at++)
+  {
+      getIonPos(at,ion_pos1);
+      for (int e=0; e < totnelectrons; e++)
+      {
+          doublevar dot = 0;
+          for (int d = 0; d < 3; d++)
+          {
+              dot += (ion_pos1(d)-elecpos(e,d))*(ion_pos1(d)-elecpos(e,d));
+          }
+          dipole -= 2.0*ions.charge(at)*dot;
+      }
+  }
+  dipole *= -pi/(3.0*cellVolume);
 
   return ion_ewald+self_ii+self_ee+self_ei+ewalde + dipole; //+xc_correction;
 }
