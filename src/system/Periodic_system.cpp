@@ -595,8 +595,12 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
   return Eew(sample);
 }
 
-doublevar Periodic_system::vewb(const Array1<doublevar> & r)
+doublevar Periodic_system::vewb(const Array1<doublevar> & r,
+                                const Array2<doublevar> & lat,
+                                const Array2<doublevar> & rlat)
 {
+    doublevar vol = abs(Determinant(lat,3));
+
     //real
     doublevar real = 0.0;
     for (int ii=-real_nmax; ii<=real_nmax; ii++)
@@ -608,7 +612,7 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
                 Array1<doublevar> rn(3);
                 for (int d=0; d<3; d++)
                 {
-                    rn(d) = r(d) + ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
+                    rn(d) = r(d) + ii*lat(0,d) + jj*lat(1,d) + kk*lat(2,d);
                 }
                 doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
                 real += erfcm(alpha*norm)/norm;
@@ -629,7 +633,7 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
                 Array1<doublevar> g(3);
                 for (int d=0; d<3; d++)
                 {
-                    g(d) = 2*pi*(ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d));
+                    g(d) = 2*pi*(ii*rlat(0,d) + jj*rlat(1,d) + kk*rlat(2,d));
                 }
                 doublevar dot = g(0)*r(0)+g(1)*r(1)+g(2)*r(2);
                 doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
@@ -637,13 +641,15 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
             }
         }
     }
-    recip *= 4*pi/cellVolume;
+    recip *= 4*pi/vol;
 
-    return real+recip-pi/(cellVolume*alpha*alpha);
+    return real+recip-pi/(vol*alpha*alpha);
 }
 
-void Periodic_system::calcMadelung()
+void Periodic_system::calcMadelung(const Array2<doublevar> & lat, const Array2<doublevar> & rlat)
 {
+    doublevar vol = abs(Determinant(lat,3));
+
     doublevar prev = 0;
     doublevar real = 0;
     for (int n = 1; n < 100; n++)
@@ -662,7 +668,7 @@ void Periodic_system::calcMadelung()
                     Array1<doublevar> rn(3);
                     for (int d=0; d<3; d++)
                     {
-                        rn(d) = ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
+                        rn(d) = ii*lat(0,d) + jj*lat(1,d) + kk*lat(2,d);
                     }
                     doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
                     real += erfcm(alpha*norm)/norm;
@@ -697,14 +703,14 @@ void Periodic_system::calcMadelung()
                     Array1<doublevar> g(3);
                     for (int d=0; d<3; d++)
                     {
-                        g(d) = 2*pi*(ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d));
+                        g(d) = 2*pi*(ii*rlat(0,d) + jj*rlat(1,d) + kk*rlat(2,d));
                     }
                     doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
                     recip += exp(-gsqrd/(4*alpha*alpha))/gsqrd;
                 }
             }
         }
-        recip *= 4.0*pi/cellVolume;
+        recip *= 4.0*pi/vol;
         if (abs(prev-recip)<1.0e-6)
         {
             recip_nmax = n;
@@ -716,20 +722,46 @@ void Periodic_system::calcMadelung()
         }
     }
 
-    madelung = real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
+    madelung = real+recip-2*alpha/sqrt(pi)-pi/(vol*alpha*alpha);
 }
 
 
 doublevar Periodic_system::Eew(Sample_point * sample)
 {
+
+    //Doubled Lattice
+
+    Array2<doublevar> mod_lat(3,3);
+    Array2<doublevar> cross(3,3);
+    Array2<doublevar> mod_rlat(3,3);
+
+    for (int i=0; i<3; i++)
+    {
+        for (int d=0; d<3; d++)
+        {
+            mod_lat(i,d) = 2*latVec(i,d);
+        }
+    }
+    doublevar det = abs(Determinant(mod_lat,3));
+    getCross(mod_lat,cross);
+    for (int i=0; i<3; i++)
+    {
+        for (int d=0; d<3; d++)
+        {
+            mod_rlat(i,d) = cross(i,d)/det;
+        }
+    }
+    
+
     if (updateMadelung)
     {
-        calcMadelung();
+        calcMadelung(mod_lat,mod_rlat);
         updateMadelung=false;
     }
     sample->updateEEDist();
     sample->updateEIDist();
     Array1<doublevar> dr(3);
+    Array1<doublevar> dr2(3);
     if (updateIonIon)
     {
         ionion=0.0;
@@ -743,9 +775,13 @@ doublevar Periodic_system::Eew(Sample_point * sample)
                 }
                 for (int d=0; d<3; d++)
                 {
-                    dr(d) = ions.r(d,at2)-ions.r(d,at1);
+                    dr(d)  = ions.r(d,at2)-ions.r(d,at1);
+                    dr2(d) = 2*(ions.r(d,at2)-ions.r(d,at1));
                 }
-                ionion += ions.charge(at1)*ions.charge(at2)*vewb(dr);
+                doublevar r1 = sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
+                doublevar r2 = sqrt(dr2(0)*dr2(0)+dr2(1)*dr2(1)+dr2(2)*dr2(2));
+                doublevar pot = vewb(dr2,mod_lat,mod_rlat) - 1.0/r2 + 1.0/r1;
+                ionion += ions.charge(at1)*ions.charge(at2)*pot;
             }
         }
         updateIonIon=false;
@@ -757,8 +793,15 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         {
             Array1<doublevar> eidist(5);
             sample->getEIDist(e,at,eidist);
-            for(int d=0; d<3; d++) dr(d) = eidist(d+2);
-            en -= ions.charge(at)*vewb(dr);
+            for(int d=0; d<3; d++)
+            {
+                dr(d) = eidist(d+2);
+                dr2(d) = 2*eidist(d+2);
+            }
+            doublevar r1 = sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
+            doublevar r2 = sqrt(dr2(0)*dr2(0)+dr2(1)*dr2(1)+dr2(2)*dr2(2));
+            doublevar pot = vewb(dr2,mod_lat,mod_rlat) - 1.0/r2 + 1.0/r1;
+            en -= ions.charge(at)*pot;
         }
     }
     for (int e1 = 0; e1 < totnelectrons; e1++)
@@ -767,8 +810,15 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         {
             Array1 <doublevar> eedist(5);
             sample->getEEDist(e1,e2,eedist);
-            for(int d=0; d<3; d++) dr(d) = eedist(d+2);
-            en += vewb(dr);
+            for(int d=0; d<3; d++)
+            {
+                dr(d) = eedist(d+2);
+                dr2(d) = 2*eedist(d+2);
+            } 
+            doublevar r1 = sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
+            doublevar r2 = sqrt(dr2(0)*dr2(0)+dr2(1)*dr2(1)+dr2(2)*dr2(2));
+            doublevar pot = vewb(dr2,mod_lat,mod_rlat) - 1.0/r2 + 1.0/r1;
+            en += pot;
         }
     }
 
