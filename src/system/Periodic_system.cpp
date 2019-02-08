@@ -633,7 +633,7 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
     return real+recip-pi/(cellVolume*alpha*alpha);
 }
 
-doublevar Periodic_system::calcMadelung()
+void Periodic_system::calcMadelung()
 {
     int nlatvec = 2;
     //real
@@ -670,7 +670,7 @@ doublevar Periodic_system::calcMadelung()
     }
     recip *= 4*pi/cellVolume;
 
-    return real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
+    madelung = real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
 
 }
 
@@ -683,18 +683,24 @@ doublevar Periodic_system::Eew(Sample_point * sample)
     Array1 <doublevar> dr(3); 
     for(int at1 = 0; at1 < ions.size(); at1++)
     {
-        for (int at2 = 0; at2 < ions.size(); at2++)
+        if (updateIonIon)
         {
-            if (at1 == at2)
+            ionion=0.0;
+            for (int at2 = 0; at2 < ions.size(); at2++)
             {
-                continue;
+                if (at1 == at2)
+                {
+                    continue;
+                }
+                for (int d=0; d<3; d++)
+                {
+                    dr(d) = ions.r(d,at2)-ions.r(d,at1);
+                }
+                ionion += ions.charge(at1)*ions.charge(at2)*vewb(dr);
             }
-            for (int d=0; d<3; d++)
-            {
-                dr(d) = ions.r(d,at2)-ions.r(d,at1);
-            }
-            en += ions.charge(at1)*ions.charge(at2)*vewb(dr);
+            updateIonIon=false;
         }
+        en += ionion;
         for (int e2 = 0; e2 < totnelectrons; e2++)
         {
             Array1<doublevar> eidist(5);
@@ -733,6 +739,12 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         charges+=ions.charge(at)*ions.charge(at);
     }
     charges += totnelectrons;
+
+    if (updateMadelung)
+    {
+        calcMadelung();
+        updateMadelung=false;
+    }
     en += 0.5*madelung*charges;
     return en;
 }

@@ -58,7 +58,10 @@ public:
     ptr=new Periodic_system(*this);
   }
 
-  Periodic_system() {}
+  Periodic_system() {
+      updateMadelung=true;
+      updateIonIon=true;
+  }
 
   void notify(change_type, int);
   int read(vector <string> & words, unsigned int & pos);
@@ -211,8 +214,11 @@ private:
 
   doublevar Eew(Sample_point * sample);
   doublevar vewb(const Array1<doublevar> & r);
-  doublevar calcMadelung();
+  void calcMadelung();
   doublevar madelung;
+  bool updateMadelung;
+  bool updateIonIon;
+  doublevar ionion;
 };
 
 
