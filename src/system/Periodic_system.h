@@ -215,6 +215,8 @@ private:
   doublevar Eew(Sample_point * sample);
   doublevar vewb(const Array1<doublevar> & r);
   void calcMadelung();
+  int real_nmax;
+  int recip_nmax;
   doublevar madelung;
   bool updateMadelung;
   bool updateIonIon;

@@ -597,14 +597,13 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
 
 doublevar Periodic_system::vewb(const Array1<doublevar> & r)
 {
-    int nlatvec = 2;
     //real
     doublevar real = 0.0;
-    for (int ii=-nlatvec; ii<=nlatvec; ii++)
+    for (int ii=-real_nmax; ii<=real_nmax; ii++)
     {
-        for (int jj=-nlatvec; jj<=nlatvec; jj++)
+        for (int jj=-real_nmax; jj<=real_nmax; jj++)
         {
-            for (int kk=-nlatvec; kk<=nlatvec; kk++)
+            for (int kk=-real_nmax; kk<=real_nmax; kk++)
             {
                 Array1<doublevar> rn(3);
                 for (int d=0; d<3; d++)
@@ -617,16 +616,27 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
         }
     }
     doublevar recip = 0.0;
-    for (int gpt=0; gpt<ngpoints; gpt++)
+    for (int ii=-recip_nmax; ii<=recip_nmax; ii++)
     {
-        doublevar dot=0.0;
-        doublevar gsqrd = 0.0;
-        for (int d=0; d<3; d++)
+        for (int jj=-recip_nmax; jj<=recip_nmax; jj++)
         {
-            dot += gpoint(gpt,d)*r(d);
-            gsqrd += gpoint(gpt,d)*gpoint(gpt,d);
+            for (int kk=-recip_nmax; kk<=recip_nmax; kk++)
+            {
+                Array1<doublevar> g(3);
+                for (int d=0; d<3; d++)
+                {
+                    g(d) = ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d);
+                }
+                doublevar dot=0.0;
+                doublevar gsqrd = 0.0;
+                for (int d=0; d<3; d++)
+                {
+                    dot += r(d)*g(d);
+                    gsqrd += g(d)*g(d);
+                }
+                recip += exp(-gsqrd/(4.0*alpha*alpha))/gsqrd * cos(dot);
+            }
         }
-        recip += exp(-gsqrd/(4.0*alpha*alpha))/gsqrd*cos(dot);
     }
     recip *= 4*pi/cellVolume;
 
@@ -635,51 +645,93 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
 
 void Periodic_system::calcMadelung()
 {
-    int nlatvec = 2;
-    //real
-    doublevar real = 0.0;
-    for (int ii=-nlatvec; ii<=nlatvec; ii++)
+    doublevar prev = 0;
+    doublevar real = 0;
+    for (int n = 1; n < 100; n++)
     {
-        for (int jj=-nlatvec; jj<=nlatvec; jj++)
+        real = 0.0;
+        for (int ii=-n; ii<=n; ii++)
         {
-            for (int kk=-nlatvec; kk<=nlatvec; kk++)
+            for (int jj=-n; jj<=n; jj++)
             {
-                if ((ii==0)&&(jj==0)&&(kk==0))
+                for (int kk=-n; kk<=n; kk++)
                 {
-                    continue;
+                    if ((ii==0)&&(jj==0)&&(kk==0))
+                    {
+                        continue;
+                    }
+                    Array1<doublevar> rn(3);
+                    for (int d=0; d<3; d++)
+                    {
+                        rn(d) = ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
+                    }
+                    doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
+                    real += erfcm(alpha*norm)/norm;
                 }
-                Array1<doublevar> rn(3);
-                for (int d=0; d<3; d++)
-                {
-                    rn(d) = ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
-                }
-                doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
-                real += erfcm(alpha*norm)/norm;
             }
+        }
+        if (abs(real-prev)<1.0e-6)
+        {
+            real_nmax = n;
+            break;
+        }
+        else
+        {
+            prev = real;
         }
     }
     doublevar recip = 0.0;
-    for (int gpt=0; gpt<ngpoints; gpt++)
+    prev = 0.0;
+    for (int n = 1; n < 100; n++)
     {
-        doublevar gsqrd = 0.0;
-        for (int d=0; d<3; d++)
+        recip = 0.0;
+        for (int ii=-n; ii<=n; ii++)
         {
-            gsqrd += gpoint(gpt,d)*gpoint(gpt,d);
+            for (int jj=-n; jj<=n; jj++)
+            {
+                for (int kk=-n; kk<=n; kk++)
+                {
+                    if ((ii==0)&&(jj==0)&&(kk==0))
+                    {
+                        continue;
+                    }
+                    Array1<doublevar> g(3);
+                    for (int d=0; d<3; d++)
+                    {
+                        g(d) = ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d);
+                    }
+                    doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
+                    recip += exp(-gsqrd/(4*alpha*alpha))/gsqrd;
+                }
+            }
         }
-        recip += exp(-gsqrd/(4.0*alpha*alpha))/gsqrd;
+        recip = 4.0*pi/cellVolume;
+        if (abs(prev-recip)<1.0e-6)
+        {
+            recip_nmax = n;
+            break;
+        }
+        else
+        {
+            prev = recip;
+        }
     }
-    recip *= 4*pi/cellVolume;
 
     madelung = real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
+    cout << "madelung " << endl;
 
 }
 
 
 doublevar Periodic_system::Eew(Sample_point * sample)
 {
+    if (updateMadelung)
+    {
+        calcMadelung();
+        updateMadelung=false;
+    }
     sample->updateEEDist();
     sample->updateEIDist();
-    double en = 0.0;
     Array1 <doublevar> dr(3); 
     if (updateIonIon)
     {
@@ -701,7 +753,7 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         }
         updateIonIon=false;
     }
-    en += ionion;
+    doublevar en = ionion;
     for(int at1 = 0; at1 < ions.size(); at1++)
     {
         for (int e2 = 0; e2 < totnelectrons; e2++)
@@ -743,11 +795,6 @@ doublevar Periodic_system::Eew(Sample_point * sample)
     }
     charges += totnelectrons;
 
-    if (updateMadelung)
-    {
-        calcMadelung();
-        updateMadelung=false;
-    }
     en += 0.5*madelung*charges;
     return en;
 }
