@@ -625,7 +625,7 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
                 Array1<doublevar> g(3);
                 for (int d=0; d<3; d++)
                 {
-                    g(d) = ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d);
+                    g(d) = 2*pi*(ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d));
                 }
                 doublevar dot=0.0;
                 doublevar gsqrd = 0.0;
@@ -698,14 +698,14 @@ void Periodic_system::calcMadelung()
                     Array1<doublevar> g(3);
                     for (int d=0; d<3; d++)
                     {
-                        g(d) = ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d);
+                        g(d) = 2*pi*(ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d));
                     }
                     doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
                     recip += exp(-gsqrd/(4*alpha*alpha))/gsqrd;
                 }
             }
         }
-        recip = 4.0*pi/cellVolume;
+        recip *= 4.0*pi/cellVolume;
         if (abs(prev-recip)<1.0e-6)
         {
             recip_nmax = n;
@@ -718,7 +718,7 @@ void Periodic_system::calcMadelung()
     }
 
     madelung = real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
-    cout << "madelung " << endl;
+    cout << "madelung " << madelung << endl;
 
 }
 
