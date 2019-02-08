@@ -681,11 +681,11 @@ doublevar Periodic_system::Eew(Sample_point * sample)
     sample->updateEIDist();
     double en = 0.0;
     Array1 <doublevar> dr(3); 
-    for(int at1 = 0; at1 < ions.size(); at1++)
+    if (updateIonIon)
     {
-        if (updateIonIon)
+        ionion=0.0;
+        for(int at1 = 0; at1 < ions.size(); at1++)
         {
-            ionion=0.0;
             for (int at2 = 0; at2 < ions.size(); at2++)
             {
                 if (at1 == at2)
@@ -698,9 +698,12 @@ doublevar Periodic_system::Eew(Sample_point * sample)
                 }
                 ionion += ions.charge(at1)*ions.charge(at2)*vewb(dr);
             }
-            updateIonIon=false;
         }
-        en += ionion;
+        updateIonIon=false;
+    }
+    en += ionion;
+    for(int at1 = 0; at1 < ions.size(); at1++)
+    {
         for (int e2 = 0; e2 < totnelectrons; e2++)
         {
             Array1<doublevar> eidist(5);
