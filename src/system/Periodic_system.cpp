@@ -622,19 +622,18 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
         {
             for (int kk=-recip_nmax; kk<=recip_nmax; kk++)
             {
+                if ((ii==0)&&(jj==0)&&(kk==0))
+                {
+                    continue;
+                }
                 Array1<doublevar> g(3);
                 for (int d=0; d<3; d++)
                 {
                     g(d) = 2*pi*(ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d));
                 }
-                doublevar dot=0.0;
-                doublevar gsqrd = 0.0;
-                for (int d=0; d<3; d++)
-                {
-                    dot += r(d)*g(d);
-                    gsqrd += g(d)*g(d);
-                }
-                recip += exp(-gsqrd/(4.0*alpha*alpha))/gsqrd * cos(dot);
+                doublevar dot = g(0)*r(0)+g(1)*r(1)+g(2)*r(2);
+                doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
+                recip += exp(-gsqrd/(4*alpha*alpha))/gsqrd*cos(dot);
             }
         }
     }
@@ -718,8 +717,6 @@ void Periodic_system::calcMadelung()
     }
 
     madelung = real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
-    cout << "madelung " << madelung << endl;
-
 }
 
 
@@ -732,13 +729,13 @@ doublevar Periodic_system::Eew(Sample_point * sample)
     }
     sample->updateEEDist();
     sample->updateEIDist();
-    Array1 <doublevar> dr(3); 
+    Array1<doublevar> dr(3);
     if (updateIonIon)
     {
         ionion=0.0;
         for(int at1 = 0; at1 < ions.size(); at1++)
         {
-            for (int at2 = 0; at2 < ions.size(); at2++)
+            for (int at2 = at1+1; at2 < ions.size(); at2++)
             {
                 if (at1 == at2)
                 {
@@ -754,39 +751,26 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         updateIonIon=false;
     }
     doublevar en = ionion;
-    for(int at1 = 0; at1 < ions.size(); at1++)
+    for(int at = 0; at < ions.size(); at++)
     {
-        for (int e2 = 0; e2 < totnelectrons; e2++)
+        for (int e = 0; e < totnelectrons; e++)
         {
             Array1<doublevar> eidist(5);
-            sample->getEIDist(e2,at1,eidist);
+            sample->getEIDist(e,at,eidist);
             for(int d=0; d<3; d++) dr(d) = eidist(d+2);
-            en -= ions.charge(at1)*vewb(dr);
+            en -= ions.charge(at)*vewb(dr);
         }
     }
     for (int e1 = 0; e1 < totnelectrons; e1++)
     {
-        for (int at2 = 0; at2 < ions.size(); at2++)
+        for (int e2 = e1+1; e2 < totnelectrons; e2++)
         {
-            Array1<doublevar> eidist(5);
-            sample->getEIDist(e1,at2,eidist);
-            for(int d=0; d<3; d++) dr(d) = eidist(d+2);
-            en -= ions.charge(at2)*vewb(dr);
-        }
-        for (int e2 = 0; e2 < totnelectrons; e2++)
-        {
-            if (e1==e2)
-            {
-                continue;
-            }
             Array1 <doublevar> eedist(5);
             sample->getEEDist(e1,e2,eedist);
             for(int d=0; d<3; d++) dr(d) = eedist(d+2);
             en += vewb(dr);
         }
     }
-
-    en *= 0.5;
 
     doublevar charges = 0;
     for (int at = 0; at<ions.size(); at++)
