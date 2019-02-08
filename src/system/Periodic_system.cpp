@@ -628,6 +628,7 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
         }
         recip += exp(-gsqrd/(4.0*alpha*alpha))/gsqrd*cos(dot);
     }
+    recip *= 4*pi/cellVolume;
 
     return real+recip-pi/(cellVolume*alpha*alpha);
 }
@@ -667,6 +668,7 @@ doublevar Periodic_system::calcMadelung()
         }
         recip += exp(-gsqrd/(4.0*alpha*alpha))/gsqrd;
     }
+    recip *= 4*pi/cellVolume;
 
     return real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
 
