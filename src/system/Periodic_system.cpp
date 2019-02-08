@@ -585,13 +585,154 @@ int Periodic_system::enforcePbc(Array1 <doublevar> & pos, Array1 <int> & nshifte
 
 doublevar Periodic_system::calcLoc(Sample_point * sample)
 {
-  doublevar ewalde=ewaldElectron(sample);
+  //doublevar ewalde=ewaldElectron(sample);
   //cout << "ion_ewald " << ion_ewald << " self_ii " << self_ii
   //     << " self_ee " << self_ee << " self_ei " << self_ei << endl;
   //cout << " ewalde " << ewalde << " xc_correction " << xc_correction << endl;
   //we do not want the xc_correction in the total energy in order to compare 
   //to all other qmc codes, it is still printed out so can be added by hand 
-  return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
+  //return ion_ewald+self_ii+self_ee+self_ei+ewalde; //+xc_correction;
+  return Eew(sample);
+}
+
+doublevar Periodic_system::vewb(const Array1<doublevar> & r)
+{
+    int nlatvec = 2;
+    //real
+    doublevar real = 0.0;
+    for (int ii=-nlatvec; ii<=nlatvec; ii++)
+    {
+        for (int jj=-nlatvec; jj<=nlatvec; jj++)
+        {
+            for (int kk=-nlatvec; kk<=nlatvec; kk++)
+            {
+                Array1<doublevar> rn(3);
+                for (int d=0; d<3; d++)
+                {
+                    rn(d) = r(d) + ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
+                }
+                doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
+                real += erfcm(alpha*norm)/norm;
+            }
+        }
+    }
+    doublevar recip = 0.0;
+    for (int gpt=0; gpt<ngpoints; gpt++)
+    {
+        doublevar dot=0.0;
+        doublevar gsqrd = 0.0;
+        for (int d=0; d<3; d++)
+        {
+            dot += gpoint(gpt,d)*r(d);
+            gsqrd += gpoint(gpt,d)*gpoint(gpt,d);
+        }
+        recip += exp(-gsqrd/(4.0*alpha*alpha))/gsqrd*cos(dot);
+    }
+
+    return real+recip-pi/(cellVolume*alpha*alpha);
+}
+
+doublevar Periodic_system::calcMadelung()
+{
+    int nlatvec = 2;
+    //real
+    doublevar real = 0.0;
+    for (int ii=-nlatvec; ii<=nlatvec; ii++)
+    {
+        for (int jj=-nlatvec; jj<=nlatvec; jj++)
+        {
+            for (int kk=-nlatvec; kk<=nlatvec; kk++)
+            {
+                if ((ii==0)&&(jj==0)&&(kk==0))
+                {
+                    continue;
+                }
+                Array1<doublevar> rn(3);
+                for (int d=0; d<3; d++)
+                {
+                    rn(d) = ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
+                }
+                doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
+                real += erfcm(alpha*norm)/norm;
+            }
+        }
+    }
+    doublevar recip = 0.0;
+    for (int gpt=0; gpt<ngpoints; gpt++)
+    {
+        doublevar gsqrd = 0.0;
+        for (int d=0; d<3; d++)
+        {
+            gsqrd += gpoint(gpt,d)*gpoint(gpt,d);
+        }
+        recip += exp(-gsqrd/(4.0*alpha*alpha))/gsqrd;
+    }
+
+    return real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
+
+}
+
+
+doublevar Periodic_system::Eew(Sample_point * sample)
+{
+    sample->updateEEDist();
+    sample->updateEIDist();
+    double en = 0.0;
+    Array1 <doublevar> dr(3); 
+    for(int at1 = 0; at1 < ions.size(); at1++)
+    {
+        for (int at2 = 0; at2 < ions.size(); at2++)
+        {
+            if (at1 == at2)
+            {
+                continue;
+            }
+            for (int d=0; d<3; d++)
+            {
+                dr(d) = ions.r(d,at2)-ions.r(d,at1);
+            }
+            en += ions.charge(at1)*ions.charge(at2)*vewb(dr);
+        }
+        for (int e2 = 0; e2 < totnelectrons; e2++)
+        {
+            Array1<doublevar> eidist(5);
+            sample->getEIDist(e2,at1,eidist);
+            for(int d=0; d<3; d++) dr(d) = eidist(d+2);
+            en -= ions.charge(at1)*vewb(dr);
+        }
+    }
+    for (int e1 = 0; e1 < totnelectrons; e1++)
+    {
+        for (int at2 = 0; at2 < ions.size(); at2++)
+        {
+            Array1<doublevar> eidist(5);
+            sample->getEIDist(e1,at2,eidist);
+            for(int d=0; d<3; d++) dr(d) = eidist(d+2);
+            en -= ions.charge(at2)*vewb(dr);
+        }
+        for (int e2 = 0; e2 < totnelectrons; e2++)
+        {
+            if (e1==e2)
+            {
+                continue;
+            }
+            Array1 <doublevar> eedist(5);
+            sample->getEEDist(e1,e2,eedist);
+            for(int d=0; d<3; d++) dr(d) = eedist(d+2);
+            en += vewb(dr);
+        }
+    }
+
+    en *= 0.5;
+
+    doublevar charges = 0;
+    for (int at = 0; at<ions.size(); at++)
+    {
+        charges+=ions.charge(at)*ions.charge(at);
+    }
+    charges += totnelectrons;
+    en += 0.5*madelung*charges;
+    return en;
 }
 
 
