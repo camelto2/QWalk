@@ -595,12 +595,8 @@ doublevar Periodic_system::calcLoc(Sample_point * sample)
   return Eew(sample);
 }
 
-doublevar Periodic_system::vewb(const Array1<doublevar> & r,
-                                const Array2<doublevar> & lat,
-                                const Array2<doublevar> & rlat)
+doublevar Periodic_system::vewb(const Array1<doublevar> & r)
 {
-    doublevar vol = abs(Determinant(lat,3));
-
     //real
     doublevar real = 0.0;
     for (int ii=-real_nmax; ii<=real_nmax; ii++)
@@ -641,15 +637,13 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r,
             }
         }
     }
-    recip *= 4*pi/vol;
+    recip *= 4*pi/cellVolume;
 
-    return real+recip-pi/(vol*alpha*alpha);
+    return real+recip-pi/(cellVolume*alpha*alpha);
 }
 
-void Periodic_system::calcMadelung(const Array2<doublevar> & lat, const Array2<doublevar> & rlat)
+void Periodic_system::calcMadelung()
 {
-    doublevar vol = abs(Determinant(lat,3));
-
     doublevar prev = 0;
     doublevar real = 0;
     for (int n = 1; n < 100; n++)
@@ -710,7 +704,7 @@ void Periodic_system::calcMadelung(const Array2<doublevar> & lat, const Array2<d
                 }
             }
         }
-        recip *= 4.0*pi/vol;
+        recip *= 4.0*pi/cellVolume;
         if (abs(prev-recip)<1.0e-6)
         {
             recip_nmax = n;
@@ -722,46 +716,21 @@ void Periodic_system::calcMadelung(const Array2<doublevar> & lat, const Array2<d
         }
     }
 
-    madelung = real+recip-2*alpha/sqrt(pi)-pi/(vol*alpha*alpha);
+    madelung = real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
 }
 
 
 doublevar Periodic_system::Eew(Sample_point * sample)
 {
 
-    //Doubled Lattice
-
-    Array2<doublevar> mod_lat(3,3);
-    Array2<doublevar> cross(3,3);
-    Array2<doublevar> mod_rlat(3,3);
-
-    for (int i=0; i<3; i++)
-    {
-        for (int d=0; d<3; d++)
-        {
-            mod_lat(i,d) = 2*latVec(i,d);
-        }
-    }
-    doublevar det = abs(Determinant(mod_lat,3));
-    getCross(mod_lat,cross);
-    for (int i=0; i<3; i++)
-    {
-        for (int d=0; d<3; d++)
-        {
-            mod_rlat(i,d) = cross(i,d)/det;
-        }
-    }
-    
-
     if (updateMadelung)
     {
-        calcMadelung(mod_lat,mod_rlat);
+        calcMadelung();
         updateMadelung=false;
     }
     sample->updateEEDist();
     sample->updateEIDist();
     Array1<doublevar> dr(3);
-    Array1<doublevar> dr2(3);
     if (updateIonIon)
     {
         ionion=0.0;
@@ -769,18 +738,11 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         {
             for (int at2 = at1+1; at2 < ions.size(); at2++)
             {
-                if (at1 == at2)
-                {
-                    continue;
-                }
                 for (int d=0; d<3; d++)
                 {
                     dr(d)  = ions.r(d,at2)-ions.r(d,at1);
-                    dr2(d) = 2*(ions.r(d,at2)-ions.r(d,at1));
                 }
-                doublevar r1 = sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
-                doublevar r2 = sqrt(dr2(0)*dr2(0)+dr2(1)*dr2(1)+dr2(2)*dr2(2));
-                doublevar pot = vewb(dr2,mod_lat,mod_rlat) - 1.0/r2 + 1.0/r1;
+                doublevar pot = vewb(dr);
                 ionion += ions.charge(at1)*ions.charge(at2)*pot;
             }
         }
@@ -796,11 +758,8 @@ doublevar Periodic_system::Eew(Sample_point * sample)
             for(int d=0; d<3; d++)
             {
                 dr(d) = eidist(d+2);
-                dr2(d) = 2*eidist(d+2);
             }
-            doublevar r1 = sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
-            doublevar r2 = sqrt(dr2(0)*dr2(0)+dr2(1)*dr2(1)+dr2(2)*dr2(2));
-            doublevar pot = vewb(dr2,mod_lat,mod_rlat) - 1.0/r2 + 1.0/r1;
+            doublevar pot = vewb(dr);
             en -= ions.charge(at)*pot;
         }
     }
@@ -813,11 +772,8 @@ doublevar Periodic_system::Eew(Sample_point * sample)
             for(int d=0; d<3; d++)
             {
                 dr(d) = eedist(d+2);
-                dr2(d) = 2*eedist(d+2);
             } 
-            doublevar r1 = sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
-            doublevar r2 = sqrt(dr2(0)*dr2(0)+dr2(1)*dr2(1)+dr2(2)*dr2(2));
-            doublevar pot = vewb(dr2,mod_lat,mod_rlat) - 1.0/r2 + 1.0/r1;
+            doublevar pot = vewb(dr);
             en += pot;
         }
     }

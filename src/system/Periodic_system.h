@@ -213,11 +213,8 @@ private:
   Array1 <doublevar> ion_polarization;
 
   doublevar Eew(Sample_point * sample);
-  doublevar vewb(const Array1<doublevar> & r,
-                 const Array2<doublevar> & lat,
-                 const Array2<doublevar> & rlat);
-  void calcMadelung(const Array2<doublevar> & lat,
-                    const Array2<doublevar> & rlat);
+  doublevar vewb(const Array1<doublevar> & r);
+  void calcMadelung();
   int real_nmax;
   int recip_nmax;
   doublevar madelung;
