@@ -608,7 +608,7 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
                 Array1<doublevar> rn(3);
                 for (int d=0; d<3; d++)
                 {
-                    rn(d) = r(d) + ii*lat(0,d) + jj*lat(1,d) + kk*lat(2,d);
+                    rn(d) = r(d) + ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
                 }
                 doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
                 real += erfcm(alpha*norm)/norm;
@@ -629,7 +629,7 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
                 Array1<doublevar> g(3);
                 for (int d=0; d<3; d++)
                 {
-                    g(d) = 2*pi*(ii*rlat(0,d) + jj*rlat(1,d) + kk*rlat(2,d));
+                    g(d) = 2*pi*(ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d));
                 }
                 doublevar dot = g(0)*r(0)+g(1)*r(1)+g(2)*r(2);
                 doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
@@ -662,7 +662,7 @@ void Periodic_system::calcMadelung()
                     Array1<doublevar> rn(3);
                     for (int d=0; d<3; d++)
                     {
-                        rn(d) = ii*lat(0,d) + jj*lat(1,d) + kk*lat(2,d);
+                        rn(d) = ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
                     }
                     doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
                     real += erfcm(alpha*norm)/norm;
@@ -697,7 +697,7 @@ void Periodic_system::calcMadelung()
                     Array1<doublevar> g(3);
                     for (int d=0; d<3; d++)
                     {
-                        g(d) = 2*pi*(ii*rlat(0,d) + jj*rlat(1,d) + kk*rlat(2,d));
+                        g(d) = 2*pi*(ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d));
                     }
                     doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
                     recip += exp(-gsqrd/(4*alpha*alpha))/gsqrd;
