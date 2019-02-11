@@ -727,6 +727,12 @@ doublevar Periodic_system::Eew(Sample_point * sample)
     {
         calcMadelung();
         updateMadelung=false;
+        cell_charge = 0.0;
+        for (int at = 0; at<ions.size(); at++)
+        {
+            cell_charge += ions.charge(at);
+        }
+        cell_charge -= totnelectrons;
     }
     sample->updateEEDist();
     sample->updateEIDist();
@@ -734,6 +740,8 @@ doublevar Periodic_system::Eew(Sample_point * sample)
     if (updateIonIon)
     {
         ionion=0.0;
+        ion_center.Resize(3);
+        ion_center = 0;
         for(int at1 = 0; at1 < ions.size(); at1++)
         {
             for (int at2 = at1+1; at2 < ions.size(); at2++)
@@ -745,9 +753,33 @@ doublevar Periodic_system::Eew(Sample_point * sample)
                 doublevar pot = vewb(dr);
                 ionion += ions.charge(at1)*ions.charge(at2)*pot;
             }
+            for (int d=0; d<3; d++)
+            {
+                ion_center(d) += ions.charge(at1)*ions.r(d,at1);
+            }
         }
         updateIonIon=false;
     }
+
+    if (abs(cell_charge)>0)
+    {
+        charge_center.Resize(3);
+        charge_center = ion_center;
+        Array2<doublevar> elecpos(totnelectrons,3);
+        sample->getAllElectronPos(elecpos);
+        for (int e=0; e<totnelectrons; e++)
+        {
+            for (int d=0; d<3; d++)
+            {
+                charge_center(d) -= elecpos(e,d);
+            }
+        }
+        for (int d=0; d<3; d++)
+        {
+            charge_center(d) /= cell_charge;
+        }
+    }
+
     doublevar en = ionion;
     for(int at = 0; at < ions.size(); at++)
     {
@@ -761,6 +793,17 @@ doublevar Periodic_system::Eew(Sample_point * sample)
             }
             doublevar pot = vewb(dr);
             en -= ions.charge(at)*pot;
+        }
+        if (abs(cell_charge)>0)
+        {//Atom with point charge background
+            Array1<doublevar> atpos(3);
+            for (int d=0; d<3; d++)
+            {
+                atpos(d) = ions.r(d,at);
+            }
+            sample->minDist(atpos,charge_center,dr);
+            doublevar pot = vewb(dr) - 1.0/sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
+            en += ions.charge(at)*(-cell_charge)*pot;
         }
     }
     for (int e1 = 0; e1 < totnelectrons; e1++)
@@ -776,6 +819,14 @@ doublevar Periodic_system::Eew(Sample_point * sample)
             doublevar pot = vewb(dr);
             en += pot;
         }
+        if (abs(cell_charge)>0)
+        {//Electron with point charge background
+            Array1<doublevar> elecpos(3);
+            sample->getElectronPos(e1,elecpos);
+            sample->minDist(elecpos,charge_center,dr);
+            doublevar pot = vewb(dr) - 1.0/sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
+            en -= (-cell_charge)*pot;
+        }
     }
 
     doublevar charges = 0;
@@ -784,6 +835,10 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         charges+=ions.charge(at)*ions.charge(at);
     }
     charges += totnelectrons;
+    if (abs(cell_charge)>0)
+    {
+        charges += cell_charge*cell_charge;
+    }
 
     en += 0.5*madelung*charges;
     return en;

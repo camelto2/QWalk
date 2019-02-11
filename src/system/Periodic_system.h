@@ -221,6 +221,9 @@ private:
   bool updateMadelung;
   bool updateIonIon;
   doublevar ionion;
+  Array1<doublevar> charge_center;
+  Array1<doublevar> ion_center;
+  doublevar cell_charge;
 };
 
 
