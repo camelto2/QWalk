@@ -778,6 +778,7 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         {
             charge_center(d) /= cell_charge;
         }
+        enforcePbc(charge_center,charge_center);
     }
 
     doublevar en = ionion;
@@ -802,7 +803,7 @@ doublevar Periodic_system::Eew(Sample_point * sample)
                 atpos(d) = ions.r(d,at);
             }
             sample->minDist(atpos,charge_center,dr);
-            doublevar pot = vewb(dr) - 1.0/sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
+            doublevar pot = vewb(dr);
             en += ions.charge(at)*(-cell_charge)*pot;
         }
     }
@@ -824,7 +825,7 @@ doublevar Periodic_system::Eew(Sample_point * sample)
             Array1<doublevar> elecpos(3);
             sample->getElectronPos(e1,elecpos);
             sample->minDist(elecpos,charge_center,dr);
-            doublevar pot = vewb(dr) - 1.0/sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2));
+            doublevar pot = vewb(dr);
             en -= (-cell_charge)*pot;
         }
     }
