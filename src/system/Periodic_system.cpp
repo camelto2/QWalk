@@ -778,7 +778,8 @@ doublevar Periodic_system::Eew(Sample_point * sample)
         {
             charge_center(d) /= cell_charge;
         }
-        enforcePbc(charge_center,charge_center);
+        Array1<int> shift;
+        enforcePbc(charge_center,shift);
     }
 
     doublevar en = ionion;
