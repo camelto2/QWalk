@@ -734,6 +734,7 @@ doublevar Periodic_system::Eew(Sample_point * sample)
     if (updateIonIon)
     {
         ionion=0.0;
+        doublevar p_nn = 0.0;
         for(int at1 = 0; at1 < ions.size(); at1++)
         {
             for (int at2 = at1+1; at2 < ions.size(); at2++)
@@ -743,12 +744,14 @@ doublevar Periodic_system::Eew(Sample_point * sample)
                     dr(d)  = ions.r(d,at2)-ions.r(d,at1);
                 }
                 doublevar pot = vewb(dr);
+                p_nn += ions.charge(at1)*ions.charge(at2)*(pot-1/sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2))-madelung);
                 ionion += ions.charge(at1)*ions.charge(at2)*pot;
             }
         }
         updateIonIon=false;
     }
     doublevar en = ionion;
+    p_en = 0.0;
     for(int at = 0; at < ions.size(); at++)
     {
         for (int e = 0; e < totnelectrons; e++)
@@ -760,9 +763,11 @@ doublevar Periodic_system::Eew(Sample_point * sample)
                 dr(d) = eidist(d+2);
             }
             doublevar pot = vewb(dr);
+            p_en -= ions.charge(at)*(pot-1/sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2))-madelung);
             en -= ions.charge(at)*pot;
         }
     }
+    p_ee = 0.0;
     for (int e1 = 0; e1 < totnelectrons; e1++)
     {
         for (int e2 = e1+1; e2 < totnelectrons; e2++)
@@ -774,6 +779,7 @@ doublevar Periodic_system::Eew(Sample_point * sample)
                 dr(d) = eedist(d+2);
             } 
             doublevar pot = vewb(dr);
+            p_en += (pot-1/sqrt(dr(0)*dr(0)+dr(1)*dr(1)+dr(2)*dr(2))-madelung);
             en += pot;
         }
     }

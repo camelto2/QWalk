@@ -144,6 +144,13 @@ public:
     o=origin;
   }
 
+  void getMultipoleContributions(doublevar & nn, doublevar & en, doublevar & ee)
+  {
+      nn = p_nn;
+      en = p_en;
+      ee = p_ee;
+  }
+
 private:
   friend class Periodic_sample;
 
@@ -221,6 +228,9 @@ private:
   bool updateMadelung;
   bool updateIonIon;
   doublevar ionion;
+  doublevar p_ee;
+  doublevar p_nn;
+  doublevar p_en;
 };
 
 

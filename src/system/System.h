@@ -155,6 +155,11 @@ public:
 
   virtual void makeCopy(System *& ptr)=0;
 
+  virtual void getMultipoleContributions(doublevar & nn, doublevar & en, doublevar & ee)
+  {
+      error("This system does not implement getMultipoleContributions");
+  }
+
 };
 
 int allocate(vector <string> &, System * &);

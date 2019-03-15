@@ -69,6 +69,8 @@ int decide_averager(string & label, Average_generator *& avg) {
     avg=new Average_so;  
   else if(caseless_eq(label,"LDOTS"))
     avg=new Average_ldots;
+  else if (caseless_eq(label,"EWALD_MULTI"))
+    avg=new Average_EwaldMultipoleContributions;
   else 
     error("Didn't understand ", label, " in Average_generator.");
   
@@ -2332,6 +2334,44 @@ void Average_wf_parmderivs::jsonOutput(Average_return &avg ,Average_return & err
    os << "}\n";
    
 }
+
+
+void Average_EwaldMultipoleContributions::read(System * sys, Wavefunction_data * wfdata, vector <string> & words) { 
+}
+
+void Average_EwaldMultipoleContributions::evaluate(Wavefunction_data * wfdata, Wavefunction * wf,
+                              System * sys, Sample_point * sample, Average_return & avg ) { 
+  avg.type="ewald_multipoles";
+  int ndim=3;
+  avg.vals.Resize(ndim);
+  avg.vals=0.0;
+  sys->getMultipoleContributions(avg.vals(0),avg.vals(1),avg.vals(2));
+}
+
+void Average_EwaldMultipoleContributions::write_init(string & indent, ostream & os) { 
+  os << indent << "ewald_multipoles \n";
+}
+
+void Average_EwaldMultipoleContributions::read(vector <string> & words) { 
+  
+}
+
+void Average_EwaldMultipoleContributions::write_summary(Average_return & avg, Average_return & err, ostream & os) {
+  int ndim=avg.vals.GetDim(0);
+  assert(ndim <= err.vals.GetDim(0));
+  //Could put this in Debye if we want to be nice.
+  os << "Ewald multipole contributions (a.u.) \n";
+  for(int d=0; d< ndim; d++) { 
+    if(d==0) os << "p_nn ";
+    else if(d==1) os << "p_en ";
+    else if(d==2) os << "p_ee ";
+    os << avg.vals(d) << " +/- " << err.vals(d) << endl;
+  }
+    
+}
+
+
+
 //-----------------------------------------------------------------------------
 
 

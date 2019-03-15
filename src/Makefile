@@ -14,7 +14,7 @@ QWALK_VERSION = $(shell git describe)
 MAKEPATH:=$(DVLPATH)/make
 OBJPATH:=$(DVLPATH)/obj/$(PLATFORM)
 SRCPATH:=$(DVLPATH)
-PROJECT:=$(DVLPATH)/qwalk-ewald3D-$(PLATFORM)
+PROJECT:=$(DVLPATH)/qwalk-ewald_multipole-$(PLATFORM)
 DEPENDFILE:=$(OBJPATH)/depend
 
 include make.include
