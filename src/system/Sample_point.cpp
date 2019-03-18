@@ -143,6 +143,10 @@ void Config_save_point::read(istream & is) {
   assert(dummy=="ndim");
   int ndim;
   is >> ndim;
+  is >> dummy;
+  assert(dummy=="spindim");
+  is >> dummy;
+  assert(dummy=="1");
   for(int e=0; e< nelec; e++) { 
     electronpos(e).Resize(ndim);
     for(int d=0; d< 3; d++) { 
@@ -152,7 +156,7 @@ void Config_save_point::read(istream & is) {
   }
 }
 void Config_save_point::write(ostream & os) { 
-  os << "nElec " << electronpos.GetDim(0) << " ndim " << 3 << endl;
+  os << "nElec " << electronpos.GetDim(0) << " ndim " << 3 << " spindim " << 1 << endl;
   for(int e=0; e< electronpos.GetDim(0); e++) { 
     for(int d=0; d< 3; d++) { 
       os << electronpos(e)(d) << " ";
