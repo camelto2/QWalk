@@ -38,7 +38,7 @@ void Linear_optimization_method::read(vector <string> words,
   if(!readvalue(words,pos=0,sig_H_threshold,"SIG_H_THRESHOLD"))
     sig_H_threshold=0.5;
   if(!readvalue(words,pos=0,minimum_psi0,"MINIMUM_PSI0"))
-    minimum_psi0=0.4;
+    minimum_psi0=0.8;
   if(!readvalue(words, pos=0, max_vmc_nstep, "MAX_VMC_NSTEP"))
     max_vmc_nstep=2*vmc_nstep;
   if(!readvalue(words, pos=0, max_nconfig_eval, "MAX_FIT_NCONFIG"))
@@ -49,9 +49,11 @@ void Linear_optimization_method::read(vector <string> words,
   pseudopotential_derivatives=haskeyword(words,pos=0,"PSEUDOPOTENTIAL_DERIVATIVES");
   if(!readvalue(words, pos=0, max_nconfig_eval, "MAX_ZERO_ITERATIONS"))
     max_zero_iterations=2;
+  if(!readvalue(words,pos=0,nodal_cutoff, "NODAL_CUTOFF"))
+    nodal_cutoff=0;
 
   if(!readvalue(words, pos=0, max_vmc_nstep, "SVD_TOLERANCE"))
-    svd_tolerance=1e-9;
+    svd_tolerance=-1;
   
   allocate(options.systemtext[0],  sys);
   sys->generatePseudo(options.pseudotext, pseudo);
@@ -518,7 +520,15 @@ doublevar Linear_optimization_method::line_minimization(Array2 <doublevar> & S,
   int n=S.GetDim(0);
 
   Array2 <doublevar> Pinv,Htilde,Stilde;
-  dimension_reduction(H,S,Pinv,Htilde,Stilde,svd_tolerance);
+  if(svd_tolerance > 0) 
+    dimension_reduction(H,S,Pinv,Htilde,Stilde,svd_tolerance);
+  else { 
+    Pinv.Resize(n,n);
+    Htilde=H;
+    Stilde=S;
+    Pinv=0.0;
+    for(int i=0; i< n; i++) Pinv=1.0;
+  }
   
   Array1 <bool> linear;
   wfdata->linearParms(linear);
@@ -548,7 +558,10 @@ doublevar Linear_optimization_method::line_minimization(Array2 <doublevar> & S,
   for(int i=0; i < nstabil-1; i+=1) { 
     Array1 <doublevar> dptilde(Htilde.GetDim(0));
     doublevar prop_psi0=find_directions(Stilde,Htilde,dptilde,acc_stabils[i],linear);
-    recover_deltap(Pinv,dptilde,alphas(i));
+    if(svd_tolerance > 0)
+      recover_deltap(Pinv,dptilde,alphas(i));
+    else
+      alphas(i)=dptilde;
     prop_psi(i)=prop_psi0;
   }
   
@@ -586,7 +599,10 @@ doublevar Linear_optimization_method::line_minimization(Array2 <doublevar> & S,
   Array1 <doublevar> alphanew(alpha.GetDim(0));
   Array1 <doublevar> dptilde(Htilde.GetDim(0));
   doublevar prop_psi0=find_directions(Stilde,Htilde,dptilde,min_stabil,linear);
-  recover_deltap(Pinv,dptilde,alphanew);
+  if(svd_tolerance > 0) 
+    recover_deltap(Pinv,dptilde,alphanew);
+  else
+    alphanew=dptilde;
   
   for(int i=0; i< alpha.GetDim(0); i++) alphanew(i)+=alpha(i);
   
@@ -792,6 +808,8 @@ void Linear_optimization_method::wavefunction_derivative(
   append_number(vmc_section,vmc_nstep);
   vmc_section+="  nblock 20 average { WF_PARMDERIV "; 
   if(pseudopotential_derivatives) vmc_section+="EVALUATE_PSEUDOPOTENTIAL";
+  vmc_section+=" nodal_cutoff ";
+  vmc_section+=to_string(nodal_cutoff);
   vmc_section+="} ";
   vector <string> words;
   string sep=" ";
@@ -831,8 +849,8 @@ void Linear_optimization_method::wavefunction_derivative(
 
   H(0,0)=en(0);
   for(int i=0; i < n; i++) { 
-    H(i+1,0)=2*(deriv_avg.vals(i)-en(0)*deriv_avg.vals(n+i));
-    H(0,i+1)=(H(i+1,0)+2.*deriv_avg.vals(2*n+i));
+    H(i+1,0)=(deriv_avg.vals(i)-en(0)*deriv_avg.vals(n+i));
+    H(0,i+1)=(H(i+1,0)+deriv_avg.vals(2*n+i));
   }
   
   for(int i=0; i< n; i++) { 
