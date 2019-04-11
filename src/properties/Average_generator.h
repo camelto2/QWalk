@@ -431,7 +431,7 @@ private:
   
 };
 
-class Average_EwaldMultipoleContributions:public Average_generator { 
+class Average_EwaldContributions:public Average_generator { 
 public:
   virtual void evaluate(Wavefunction_data * wfdata, Wavefunction * wf,
                         System * sys, Sample_point * sample, Average_return & );
@@ -440,6 +440,7 @@ public:
   virtual void write_init(string & indent, ostream & os);
   virtual void read(vector <string> & words);
   virtual void write_summary(Average_return &,Average_return &, ostream & os);
+  virtual void jsonOutput(Average_return &,Average_return &, ostream & os);
  private:
 };
 

@@ -144,8 +144,9 @@ public:
     o=origin;
   }
 
-  void getMultipoleContributions(doublevar & nn, doublevar & en, doublevar & ee)
+  void getEwaldContributions(doublevar & coulomb, doublevar & nn, doublevar & en, doublevar & ee)
   {
+      coulomb = pure_coulomb;
       nn = p_nn;
       en = p_en;
       ee = p_ee;
@@ -231,6 +232,8 @@ private:
   doublevar p_ee;
   doublevar p_nn;
   doublevar p_en;
+  doublevar pure_coulomb;
+  doublevar nn_coulomb;
 };
 
 
