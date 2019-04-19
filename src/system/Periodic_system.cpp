@@ -130,7 +130,11 @@ int Periodic_system::read(vector <string> & words,
   }
 
 
+  if (!readvalue(words,pos=0,yks,"YUKAWA_SCREEN"))
+    yks = 0.0;
+
   vector <string> ktxt;
+
    
   if(readsection(words, pos=0, ktxt, "KPOINT")) {
     if(ktxt.size()!=3) error("KPOINT must be a section of size 3");
@@ -611,7 +615,7 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
                     rn(d) = r(d) + ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
                 }
                 doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
-                real += erfcm(alpha*norm)/norm;
+                real += 0.5/norm*(exp(yks*norm)*erfcm(alpha*norm+0.5*yks/alpha)+exp(-yks*norm)*erfcm(alpha*norm-0.5*yks/alpha));
             }
         }
     }
@@ -633,13 +637,21 @@ doublevar Periodic_system::vewb(const Array1<doublevar> & r)
                 }
                 doublevar dot = g(0)*r(0)+g(1)*r(1)+g(2)*r(2);
                 doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
-                recip += exp(-gsqrd/(4*alpha*alpha))/gsqrd*cos(dot);
+                recip += exp(-(yks*yks+gsqrd)/(4*alpha*alpha))/(yks*yks+gsqrd)*cos(dot);
             }
         }
     }
     recip *= 4*pi/cellVolume;
 
-    return real+recip-pi/(cellVolume*alpha*alpha);
+    doublevar res;
+    if (yks>0){
+        res = 4.0*pi/cellVolume*exp(-yks*yks/(4.0*alpha*alpha))/(yks*yks);
+    }
+    else {
+        res = -pi/(cellVolume*alpha*alpha);
+    }
+
+    return real+recip+res;
 }
 
 void Periodic_system::calcMadelung()
@@ -665,7 +677,7 @@ void Periodic_system::calcMadelung()
                         rn(d) = ii*latVec(0,d) + jj*latVec(1,d) + kk*latVec(2,d);
                     }
                     doublevar norm = sqrt(rn(0)*rn(0)+rn(1)*rn(1)+rn(2)*rn(2));
-                    real += erfcm(alpha*norm)/norm;
+                    real += 0.5/norm*(exp(yks*norm)*erfcm(alpha*norm+0.5*yks/alpha)+exp(-yks*norm)*erfcm(alpha*norm-0.5*yks/norm));
                 }
             }
         }
@@ -700,7 +712,7 @@ void Periodic_system::calcMadelung()
                         g(d) = 2*pi*(ii*recipLatVec(0,d) + jj*recipLatVec(1,d) + kk*recipLatVec(2,d));
                     }
                     doublevar gsqrd = g(0)*g(0)+g(1)*g(1)+g(2)*g(2);
-                    recip += exp(-gsqrd/(4*alpha*alpha))/gsqrd;
+                    recip += exp(-(yks*yks+gsqrd)/(4*alpha*alpha))/(yks*yks+gsqrd);
                 }
             }
         }
@@ -716,7 +728,15 @@ void Periodic_system::calcMadelung()
         }
     }
 
-    madelung = real+recip-2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
+    doublevar res;
+    if (yks > 0) {
+        res = 4*pi/cellVolume*exp(-yks*yks/(4.0*alpha*alpha))/(yks*yks);
+        res += yks*yks*erfcm(0.5*yks/alpha)-2.0*alpha/sqrt(pi)*exp(-yks*yks/(4.0*alpha*alpha));
+    }
+    else {
+        res = -2*alpha/sqrt(pi)-pi/(cellVolume*alpha*alpha);
+    }
+    madelung = real+recip+res;
 }
 
 

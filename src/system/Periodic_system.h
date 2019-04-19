@@ -221,6 +221,8 @@ private:
   bool updateMadelung;
   bool updateIonIon;
   doublevar ionion;
+  
+  doublevar yks;
 };
 
 
