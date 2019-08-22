@@ -92,6 +92,8 @@ void SHO_sample::init(System * sys) {
 
   elecDistStale=1;
 
+  elecspin.Resize(nelectrons);
+
 }
 
 
@@ -108,9 +110,17 @@ void SHO_sample::randomGuess()
       elecpos(e,d)=0;
     }
   }
+  int nup = parent->nelectrons(0);
+  for (int i=0; i < nelectrons; i++) {
+    if (i < nup)
+      setElectronSpin(i,0.0);
+    else
+      setElectronSpin(i,0.5*pi);
+  }
 
   //ionDistStale=1;
   elecDistStale=1;
+
 
   if(wfObserver) {
     wfObserver->notify(all_electrons_move, 0);

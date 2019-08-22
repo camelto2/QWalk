@@ -141,10 +141,15 @@ public:
   void saveUpdate(int, Sample_storage * );
   void restoreUpdate(int, Sample_storage *);
 
-  //CM:
-  void getElectronSpin(const int e, doublevar & s);
+  void setElectronSpin(const int e, const doublevar s) {
+    elecspin(e) = s;
+    if(wfObserver)
+      wfObserver->notify(electron_move, e); //Spin changed, notify WF
+  }
 
-  void setElectronSpin(const int e, const doublevar s);
+  void getElectronSpin(const int e, doublevar & s) {
+    s = elecspin(e); 
+  }
 
 private:
 

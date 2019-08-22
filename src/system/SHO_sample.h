@@ -128,11 +128,13 @@ public:
   //CM:
   //Dynamic Spin functions below
   void getElectronSpin(const int e, doublevar & s) {
-    error("getElectronSpin not implemented for SHO sample");
+    s = elecspin(e); 
   }
 
   void setElectronSpin(const int e, const doublevar s) {
-    error("setElectronSpin not implemented for SHO sample");
+    elecspin(e) = s;
+    if(wfObserver)
+      wfObserver->notify(electron_move, e); //Spin changed, notify WF
   }
 
 private:
@@ -143,6 +145,7 @@ private:
   Array1 <int> elecDistStale;
   Array3 <doublevar> pointdist;  //this is an upper triangular matrix;
                                  //the lower is currently wasted
+  Array1 <doublevar> elecspin;
   SHO_system * parent;
   int nd;
   

@@ -166,11 +166,13 @@ public:
   //CM:
   //Dynamic Spin functions below
   void getElectronSpin(const int e, doublevar & s) {
-    error("getElectronSpin not implemented for PBC sample");
+    s = elecspin(e); 
   }
 
   void setElectronSpin(const int e, const doublevar s) {
-    error("setElectronSpin not implemented for PBC sample");
+    elecspin(e) = s;
+    if(wfObserver)
+      wfObserver->notify(electron_move, e); //Spin changed, notify WF
   }
 
 
@@ -193,6 +195,8 @@ private:
   //the lower is currently wasted
   Array2 <doublevar> lattice_basis; //the basis we search over for interparticle distances
 
+  Array1 <doublevar> elecspin;
+  
   doublevar overall_sign;
   doublevar overall_phase;
   // false for complex-valued wavefunctions, i.e., for non-integer k-points
