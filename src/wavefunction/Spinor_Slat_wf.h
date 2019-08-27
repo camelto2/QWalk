@@ -82,6 +82,13 @@ public:
   virtual void updateLap(Wavefunction_data *, Sample_point *);
   virtual void updateSpinLap(Wavefunction_data *, Sample_point *);
 
+  void getSpinorComponents(Wavefunction_data *,
+                           Sample_point *,
+                           Array4<dcomplex> &,
+                           int);
+  void getInverseTranspose(Wavefunction_data *,
+                           Array2< Array2< dcomplex > > & invt);
+
   virtual void getVal(Wavefunction_data *, int, Wf_return &);
   virtual void getLap(Wavefunction_data *, int, Wf_return &);
   virtual void getSpinLap(Wavefunction_data *, int, Wf_return &);
@@ -125,6 +132,13 @@ private:
   void updateSpinLap(Spinor_Slat_wf_data *, Sample_point *, int);
   void getDetLap(int e, Array3<log_value <T> > & vals );
   void getDetSpinLap(int e, Array3<log_value <T> > & vals );
+
+  int nmo_() {
+    return nelectrons;
+  }
+  int ndet_() {
+    return ndet;
+  }
   
 
   Array1 <int> electronIsStaleVal;
@@ -1481,6 +1495,48 @@ template <class T> inline void Spinor_Slat_wf<T>::evalTestPos(Array1 <doublevar>
   
 
 }
+
+
+template <class T> inline void Spinor_Slat_wf<T>::getSpinorComponents(Wavefunction_data * wfdata,
+                                                                   Sample_point * sample,
+                                                                   Array4 <dcomplex> & Val,
+                                                                   int e) {
+  //if(staticSample==1 && parent->optimize_mo==0 && parent->optimize_det==0)
+  //if(parent->optimize_mo==0 && parent->optimize_det==0)
+  //  error("staticSample==1 && parent->optimize_mo==0 && parent->optimize_det==0 not supported");
+  //else{
+    Spinor_Slat_wf_data * dataptr;
+    recast(wfdata, dataptr);
+    Array2 <dcomplex> SOVal(nmo,3); SOVal=dcomplex(0,0);
+    molecorb->updateSpinorComponents(sample,e,SOVal);
+    for(int f=0; f< nfunc_; f++){
+      for(int det=0;det<ndet;det++){
+        for(int mo=0; mo<nelectrons; mo++){
+          Val(f,det,mo,0)=SOVal(dataptr->occupation(f,det)(mo),0);
+          Val(f,det,mo,1)=SOVal(dataptr->occupation(f,det)(mo),1);
+          Val(f,det,mo,2)=0.0; //Later will store Jastrow values
+        }
+      }
+    }
+    // }
+}
+
+template <class T> inline void Spinor_Slat_wf<T>::getInverseTranspose(Wavefunction_data * wfdata, Array2 <Array2 <dcomplex> > &invertrans){
+  invertrans.Resize(nfunc_, ndet);
+  Spinor_Slat_wf_data * dataptr;
+  recast(wfdata, dataptr);
+  for(int i=0; i< nfunc_; i++) {
+    for(int det=0; det < ndet; det++) {
+        invertrans(i,det).Resize(nelectrons, nelectrons);
+        for(int e=0; e< nelectrons; e++) {
+          for(int f=0; f< nelectrons; f++){
+            invertrans(i,det)(e,f)=T(dataptr->detwt(det).val())*inverse(i,det)(e,f)*T(detVal(i,det).val());
+          }
+        }
+    }
+  }
+}
+
 
 
 //----------------------------------------------------------------------

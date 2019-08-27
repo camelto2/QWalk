@@ -119,6 +119,15 @@ public:
   )
   { error("Must pass spin index. This is only used for spinor orbitals"); }
 
+  virtual void updateSpinorComponents(
+                         Sample_point * sample,
+                         int e,
+                         //!< electron number
+                         Array2 <dcomplex> & newvals
+                         //!< The return: in form (MO)
+                         )
+  { error("updateSpinorComponents not implemented for this MO type"); }
+
   virtual void updateLap(
     Sample_point * sample,
     int e,

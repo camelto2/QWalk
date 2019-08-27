@@ -114,6 +114,13 @@ public:
 
   virtual void getSpinLap(Wavefunction_data *, int, Wf_return &);
 
+  virtual void getSpinorComponents(Wavefunction_data *,
+                                   Sample_point *,
+                                   Array4<dcomplex>&,
+                                   int);
+  virtual void getInverseTranspose(Wavefunction_data *,
+                                   Array2< Array2< dcomplex > > &);
+
 private:
   friend class Slat_Jastrow_data;
   Wavefunction * slater_wf;

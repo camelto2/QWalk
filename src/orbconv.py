@@ -466,7 +466,7 @@ k=1
 f=open("new.orb","w")
 for i in range(2*nMO):
   for ion in range(nIon):
-   for j in range(ns_list[ion]*2+np_list[ion]*6+nd_list[ion]*12+nf_list[ion]*20+ng_list[ion]*30):
+   for j in range(ns_list[ion]*1+np_list[ion]*3+nd_list[ion]*6+nf_list[ion]*10+ng_list[ion]*15):
      f.write("{:>8} {:>8} {:>8} {:>8}".format(str(i+1),str(j+1),str(ion+1),str(k)))
      k+=1
      f.write ( '\n ')

@@ -25,6 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "SHO_system.h"
 #include "HEG_system.h"
 #include "qmc_io.h"
+#include "RelPseudopotential.h"
 
 int allocate(vector <string> & syswords,
              System * & sysptr)
@@ -144,7 +145,18 @@ void System::calcKineticSeparated(Wavefunction_data * wfdata,
 
 void System::generatePseudo(vector <vector <string> > & words,
                             Pseudopotential * & pseudo) {
-  pseudo=new Pseudopotential;
+  int RECPcount = 0;
+  for (int i=0; i < words.size(); i++) {
+    unsigned int pos=0;
+    if (haskeyword(words[i],pos,"RECP")) RECPcount += 1;
+  }
+  if (RECPcount == words.size()) pseudo = new RelPseudopotential;
+  else if (RECPcount > 0 && RECPcount != words.size()) {
+    error("Must use all RECP if there is even one. Convert your pseudos to RECP type");
+  }
+  else {
+    pseudo=new Pseudopotential;
+  }
   pseudo->read(words, this);
 }
 

@@ -245,6 +245,14 @@ public:
     Array2 <dcomplex> & newvals
     //!< The return: in form (MO)
   );
+
+  virtual void updateSpinorComponents(
+                         Sample_point * sample,
+                         int e,
+                         //!< electron number
+                         Array2 <dcomplex> & newvals
+                         //!< The return: in form (MO)
+                         );
   
   virtual void getBasisVal(
     Sample_point * sample,
@@ -640,6 +648,75 @@ void Spinor_matrix_quaternion::updateVal(
     //cout << "done updateVal " << endl;
 }
 
+void Spinor_matrix_quaternion::updateSpinorComponents(
+  Sample_point * sample,  int e,  Array2 <dcomplex> & newvals) {
+  //cout << "start updateval " << endl;
+  int centermax=centers.size();
+
+  static Array1 <doublevar> R(5);
+  doublevar spin;
+  sample->getElectronSpin(e,spin);
+
+  //Array1 <doublevar> symmvals_temp(maxbasis);
+
+  //Make references for easier access to the list variables.
+  Array1 <int> & basismotmp(basismo_list);
+  Array2 <int> & basisfilltmp(basisfill_list);
+  Array2 <quaternion> & moCoefftmp(moCoeff_list);
+  assert(newvals.GetDim(1) >= 1);
+
+  newvals=0;
+  Basis_function * tempbasis;
+
+  //int fn;
+  quaternion c;
+  int mo=0;
+  int scalebasis=basisfill_list.GetDim(1);
+  int totfunc=0;
+  int b; //basis
+  //cout << "here " << endl;
+  centers.updateDistance(e, sample);
+  //int retscale=newvals.GetDim(1);
+  for(int ion=0; ion < centermax; ion++) {
+    //sample->getECDist(e, ion, R);
+    centers.getDistance(e,ion,R);
+    for(int n=0; n< centers.nbasis(ion); n++) {
+      b=centers.basis(ion,n);
+      tempbasis=basis(b);
+      if(obj_cutoff(b) > R(0)) {
+        tempbasis->calcVal(R, symmvals_temp1d);
+        //cout << "ion " << ion << "b " << b << " mo "<< mo << endl;
+        int imax=nfunctions(b);
+        for(int i=0; i< imax; i++) {
+          int reducedbasis=scalebasis*totfunc;
+          if(R(0) < cutoff(totfunc)) {
+            for(int basmo=0; basmo < basismotmp.v[totfunc]; basmo++) {
+              //mo=basisfill(totfunc, basmo);
+              //c=moCoeff(totfunc, basmo);
+              //cout << "basisfill reducedbasis "<< reducedbasis
+              // << "  basmo " << basmo << endl;
+              mo=basisfilltmp.v[reducedbasis+basmo];
+              //cout << "mocoeff (mo=" << mo <<  endl;
+              //mo_counter(mo)++;
+              c=moCoefftmp.v[reducedbasis+basmo];
+              //No spin funcitons, only want orbital part
+              newvals(mo, 0)+=(c.val.first)*symmvals_temp1d(i);
+              newvals(mo, 1)+=(c.val.second)*symmvals_temp1d(i);
+              //newvals.v[retscale*mo]+=c*symmvals_temp.v[i];
+
+            }
+          }
+          totfunc++;
+        }
+      }
+      else {
+        totfunc+=nfunctions(b);
+      }
+    }
+  }
+  //n_calls++;
+    //cout << "done updateVal " << endl;
+}
 //------------------------------------------------------------------------
 
 void Spinor_matrix_quaternion::updateLap( Sample_point * sample,

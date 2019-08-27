@@ -121,6 +121,45 @@ void Slat_Jastrow::getVal(Wavefunction_data * wfdata,
   }
 }
 
+void Slat_Jastrow::getSpinorComponents(Wavefunction_data * wfdata,
+                                       Sample_point * sample,
+                                       Array4<dcomplex> &Val,
+                                       int e) {
+  //Should only be used with Spinor Slater WF
+  Slat_Jastrow_data * dataptr;
+  recast(wfdata, dataptr);
+  assert(dataptr != NULL);
+
+  int nmos=slater_wf->nmo_();
+  int ndets=slater_wf->ndet_();
+  Val.Resize(nfunc_,ndets,nmos,3);
+  Array4 <dcomplex> slat_val(nfunc_,ndets, nmos,3);
+  Wf_return jast_val(nfunc_, 2);
+  jastrow_wf->getVal(dataptr->jastrow, e, jast_val);
+  //the issue is in SO, all spin are treated as up, be careful
+  slater_wf->getSpinorComponents(dataptr->slater, sample, slat_val, e);
+
+  for(int i=0; i< nfunc_; i++) {
+    for(int detm=0;detm<ndets;detm++){
+      //0 for spin up; 1 for spin down
+      for(int mo=0; mo<nmos;mo++){
+        Val(i,detm,mo,0)=slat_val(i,detm,mo,0);//*exp(jast_val.amp(i,0));//*exp(I*jast_val.phase(i,0));
+        Val(i,detm,mo,1)=slat_val(i,detm,mo,1);//*exp(jast_val.amp(i,0));//*exp(I*jast_val.phase(i,0));
+        //add the logarithm of jastrow not implemented yet
+        Val(i,detm,mo,2)=exp(jast_val.amp(i,0))*exp(I*jast_val.phase(i,0));//slat_val(i,mo,2);
+      }
+    }
+  }
+}
+
+void Slat_Jastrow::getInverseTranspose(Wavefunction_data * wfdata,
+                                       Array2< Array2< dcomplex> > & invt) {
+  Slat_Jastrow_data * dataptr;
+  recast(wfdata, dataptr);
+  assert(dataptr != NULL);
+  slater_wf->getInverseTranspose(dataptr->slater, invt);
+}
+
 
 void Slat_Jastrow::evalTestPos(Array1 <doublevar> & pos, Sample_point * sample,Array1 <Wf_return> & wf) {
   Array1 <Wf_return> slat_val,jast_val;

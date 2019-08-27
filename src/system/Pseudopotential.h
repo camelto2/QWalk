@@ -12,6 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
+
 You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
@@ -77,13 +78,13 @@ public:
   
 
 
-  void setDeterministic(int i) {
+  virtual void setDeterministic(int i) {
     assert(i==0 || i==1);
     deterministic=i;
   }
-  void read(vector < vector <string> > & pseudotext,
+  virtual void read(vector < vector <string> > & pseudotext,
             System * sys);
-  int showinfo(ostream & os);
+  virtual int showinfo(ostream & os);
 
   /*!
     \brief
@@ -91,22 +92,24 @@ public:
 
     Uses random evaluation of the pseudopotential automatically.
    */
-  void calcNonloc(Wavefunction_data * wfdata, System *,
+  virtual void calcNonloc(Wavefunction_data * wfdata, System *,
                   Sample_point * sample, Wavefunction * wf,
                   Array1 <doublevar> & totalv);
   
-  void calcPseudoSeparated(Wavefunction_data * wfdata,
+  virtual void calcPseudoSeparated(Wavefunction_data * wfdata,
 			   System * sys,
 			   Sample_point * sample,
 			   Wavefunction * wf,
 			   const Array1 <doublevar> & accept_var,
 			   Array2 <doublevar> & totalv); //, 
-  void calcPseudoLocal(Wavefunction_data * wfdata,
+  virtual void calcPseudoLocal(Wavefunction_data * wfdata,
 		       System * sys,
 		       Sample_point * sample,
 		       Wavefunction * wf,
-		       Array2 <doublevar> & totalv); 
-  void calcNonlocTmove(Wavefunction_data * wfdata, System *,
+           Array2 <doublevar> & totalv) {
+    error("calcPseudoLocal not implemented");
+  }
+  virtual void calcNonlocTmove(Wavefunction_data * wfdata, System *,
                        Sample_point * sample,
                        Wavefunction * wf,
                        Array1 <doublevar> & totalv,  //total p.e. from the psp
@@ -115,7 +118,7 @@ public:
 
   //Puts all matrix elements into 'tmoves' The total nonlocal potential is given 
   //by sum over tmoves.vxx
-  void calcNonlocSeparated(Wavefunction_data * wfdata, System * sys,
+  virtual void calcNonlocSeparated(Wavefunction_data * wfdata, System * sys,
 			   Sample_point * sample,
 			   Wavefunction * wf, 
 			   Array2<doublevar> &totalv
@@ -128,7 +131,7 @@ public:
     If all of them are set to one, everything is evaluated.  If it's set
     to zero, nothing is evaluated.
   */
-  void calcNonlocWithTest(Wavefunction_data *, System *,Sample_point *, Wavefunction *,
+  virtual void calcNonlocWithTest(Wavefunction_data *, System *,Sample_point *, Wavefunction *,
                           const Array1 <doublevar> & accept_var,
                           Array1 <doublevar> & totalv);
 
@@ -144,7 +147,7 @@ public:
 */
 
   
-  void calcNonlocParmDeriv(Wavefunction_data * wfdata, System *,
+  virtual void calcNonlocParmDeriv(Wavefunction_data * wfdata, System *,
                                             Sample_point * sample,
                                             Wavefunction * wf,
                                             const Array1 <doublevar> & accept_var,
@@ -155,7 +158,7 @@ public:
    
     */
 
-  void calcNonlocWithAllvariables(Wavefunction_data * wfdata, System *,
+  virtual void calcNonlocWithAllvariables(Wavefunction_data * wfdata, System *,
                                   Sample_point * sample,
                                   Wavefunction * wf,
                                   const Array1 <doublevar> & accept_var, //random variables for stochastic evaluation
@@ -167,8 +170,10 @@ public:
     \brief
     Initialize a file for use with calcNonlocWithFile
    */
-  int initializeStatic(Wavefunction_data *, Sample_point *,
-                       Wavefunction *, Pseudo_buffer & output);
+  virtual int initializeStatic(Wavefunction_data *, Sample_point *,
+                               Wavefunction *, Pseudo_buffer & output) {
+    error("initializeStatic is deprecated");
+  }
 
 
 
@@ -178,54 +183,54 @@ public:
     number of values between zero and one for random evaluation
     of the pseudopotential
    */
-  int nTest();
+  virtual int nTest();
   
   /*!
     \brief
     Randomly rotate the axes to unbias the calculation
   */
-  void randomize();
+  virtual void randomize();
   
   /*!
     \brief
     Rotate the quadrature to the axes specified in x,y,z
   */
-  void rotateQuadrature(Array1 <doublevar> & x,
+  virtual void rotateQuadrature(Array1 <doublevar> & x,
                         Array1 <doublevar> & y,
                         Array1 <doublevar> & z);
   /*!
     \brief 
     This set of Get... functions are for EKT calculations, for getting value of some private numbers. 
    */
-  int getNumL(int at) {
+  virtual int getNumL(int at) {
     return numL(at); 
   }
 
-  doublevar getCutoff(int at) {
+  virtual doublevar getCutoff(int at) {
     return cutoff(at); 
   }
-  int getDeterministic() {
+  virtual int getDeterministic() {
     return deterministic; 
   }
   
-  int getAIP(int at) {
+  virtual  int getAIP(int at) {
     return aip(at); 
   }
   
-  int getIntegralWeight(int at, int i) {
+  virtual int getIntegralWeight(int at, int i) {
     return integralweight(at, i); 
   }
 
-  doublevar getIntegralPt(int at, int i, int d)
+  virtual doublevar getIntegralPt(int at, int i, int d)
   {
     return integralpt(at, i, d); 
   }
-  int getMaxAIP() {
+  virtual int getMaxAIP() {
     return maxaip; 
   }
 
 
-  void getRadialOut(int at, int spin, Sample_point *sample,
+  virtual void getRadialOut(int at, int spin, Sample_point *sample,
 		    Array1 <doublevar> & r, Array1 <doublevar> & v_l) {
     getRadial(at, spin, sample, r, v_l);//This is completely the same with getRadial. we redefine this so as not to mix with the original private one.
   }
@@ -233,9 +238,9 @@ public:
 
  private:
   int deterministic;
-  void getRadial(int at, int spin, Sample_point * sample,
+  virtual void getRadial(int at, int spin, Sample_point * sample,
 		   Array1 <doublevar> & r, Array1 <doublevar> & v_l);
-  void getRadial(int at, int spin, Sample_point * sample,
+  virtual void getRadial(int at, int spin, Sample_point * sample,
 		 Array1 <doublevar> & r, 
 		 Array2 <doublevar> & v_l);
   Array1 <int> numL;

@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "Qmc_std.h"
 #include "Array.h"
+#include "Array45.h"
 class System;
 class Sample_point;
 class Wavefunction_data;
@@ -154,6 +155,26 @@ public:
   virtual void getLap(Wavefunction_data *, int, Wf_return &)=0;
   virtual void getSpinLap(Wavefunction_data *, int, Wf_return &);
   virtual void getForceBias(Wavefunction_data *, int, Wf_return &);
+
+  virtual void getSpinorComponents(Wavefunction_data *,
+                                   Sample_point *,
+                                   Array4 <dcomplex> &,
+                                   int e)
+  {error("getSpinorComponents not implemented");}
+
+  virtual void getInverseTranspose(Wavefunction_data *,
+                                   Array2< Array2< dcomplex > > &)
+  {
+    error("getInverseTranspose not implemented");
+  }
+  virtual int nmo_() {
+    error("nmo_ not implemented");
+    return 1;
+  }
+  virtual int ndet_() {
+    error("ndet_ not implemented");
+    return 1;
+  }
 
   /*!
     \brief 

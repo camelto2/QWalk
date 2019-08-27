@@ -81,7 +81,8 @@ dcomplex Ylm(int l, int ml, Array1 <doublevar> r){
   {
   case 0:
     return 1;
-
+    break;
+    
   case 1:
     switch(ml){
       case -1:
