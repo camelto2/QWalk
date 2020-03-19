@@ -194,7 +194,7 @@ public:
                         Array1 <doublevar> & y,
                         Array1 <doublevar> & z);
   /*!
-    \bief 
+    \brief 
     This set of Get... functions are for EKT calculations, for getting value of some private numbers. 
    */
   int getNumL(int at) {
@@ -246,6 +246,7 @@ public:
   Array3 <doublevar> integralpt_orig;
   Array2 <doublevar> integralweight;
   Array1 <doublevar> cutoff;
+  doublevar calculate_threshold;
   vector <string> atomnames;
   Array1 <bool> addzeff; //!< whether or not to add Z_eff/r to the local function
   

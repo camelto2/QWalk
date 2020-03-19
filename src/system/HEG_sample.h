@@ -165,11 +165,13 @@ public:
   //CM: 
   //Dynamic Spin functions below
   void getElectronSpin(const int e, doublevar & s) {
-    error("getElectronSpin not implemented for HEG sample");
+    s = elecspin(e); 
   }
   
   void setElectronSpin(const int e, const doublevar s) {
-    error("setElectronSpin not implemented for HEG sample");
+    elecspin(e) = s;
+    if(wfObserver)
+      wfObserver->notify(electron_move, e); //Spin changed, notify WF
   }
 
 private:
@@ -183,6 +185,8 @@ private:
   
   Array2 <doublevar> tmplat; // auxiliary array used in Lucas' updateEEDist()
   Array2 <doublevar> elecpos_lc;   // elecpos in lattice coordinates
+
+  Array1 <doublevar> elecspin;
 
   doublevar overall_sign;
   doublevar overall_phase;

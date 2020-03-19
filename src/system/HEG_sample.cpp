@@ -232,6 +232,8 @@ void HEG_sample::init(System * sys) {
   elecDistStale.Resize(nelectrons);
   elecDistStale=1;
 
+  elecspin.Resize(nelectrons);
+
   tmplat.Resize(26,3);
   int counter=0;
   for(int aa=-1; aa <= 1; aa++) {
@@ -281,12 +283,21 @@ void HEG_sample::randomGuess()
     setElectronPos(e, trialPos);
   }
 
+  int nup = parent->nelectrons(0);
+  for (int i=0; i < nelectrons; i++) {
+    if (i < nup)
+      setElectronSpin(i,0.0);
+    else
+      setElectronSpin(i,0.5*pi);
+  }
+
   elecDistStale=1;
 
   if(wfObserver)
   {
     wfObserver->notify(all_electrons_move, 0);
   }
+
 
 }
 

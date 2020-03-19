@@ -190,6 +190,7 @@ void Periodic_sample::init(System * sys) {
   int ncenters=parent->centerpos.GetDim(0);
   cendist.Resize(nelectrons,ncenters, 5);
 
+  elecspin.Resize(nelectrons);
 
   elecDistStale.Resize(nelectrons);
   ionDistStale.Resize(nelectrons);
@@ -337,6 +338,14 @@ void Periodic_sample::randomGuess()
       trialPos(d)=4*range*(rng.ulec()-.5)+ioncenter(d);
     }
     setElectronPos(e, trialPos);
+  }
+
+  int nup = parent->nelectrons(0);
+  for (int i = 0; i < nelectrons; i++) {
+    if (i < nup)
+      setElectronSpin(i,0.0);
+    else
+      setElectronSpin(i,0.5*pi);
   }
 
   ionDistStale=1;

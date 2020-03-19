@@ -251,13 +251,6 @@ void Molecular_sample::randomGuess()
     }
     setElectronPos(e,trialPos);
   }
-
-  ionDistStale=1;
-  elecDistStale=1;
-
-  if(wfObserver)
-    wfObserver->notify(all_electrons_move, 0);
-
   //CM
   //Dynamic Spin representation
   //pure spinup = 0.0,pi
@@ -265,11 +258,18 @@ void Molecular_sample::randomGuess()
   //initialize spins as pure spin up or spin down
   int nup = parent->nelectrons(0);
   for (int i = 0; i < nelectrons; i++) {
-      if (i < nup)
-	  setElectronSpin(i,0.0);
-      else
-	  setElectronSpin(i,0.5*pi);
+    if (i < nup)
+      setElectronSpin(i,0.0);
+    else
+      setElectronSpin(i,0.5*pi);
   }
+
+  ionDistStale=1;
+  elecDistStale=1;
+
+  if(wfObserver)
+    wfObserver->notify(all_electrons_move, 0);
+
 
 }
 
@@ -442,19 +442,6 @@ void Molecular_sample::rawInput(istream & is)
 
 }
 
-void Molecular_sample::setElectronSpin(const int e, const doublevar s) {
-
-  elecspin(e) = s;
-  if(wfObserver)
-    wfObserver->notify(electron_move, e); //Spin changed, notify WF
-
-}
-
-void Molecular_sample::getElectronSpin(const int e, doublevar & s) {
-
-    s = elecspin(e); 
-
-}
 
 //-------------------------------------------------------------------------
 
