@@ -85,6 +85,43 @@ void limDrift(Array1 <doublevar> & drift, doublevar tau, drift_type dtype)
   
 }
 
+void limDrift(doublevar & drift, doublevar tau, drift_type dtype)
+{
+  doublevar drift2=0;
+  doublevar drifta=0;
+
+
+  if(dtype==drift_cutoff) {
+    const doublevar drmax=4;
+    
+    drift2+=drift*drift;
+
+    drifta=drmax/max( (doublevar) sqrt(drift2), drmax);
+    //cout << "drifta " << drifta*tau << endl;
+    drift*= tau*drifta;
+  }
+  else if(dtype==drift_cyrus) {
+    
+    const doublevar acyrus=0.25;
+    
+    doublevar tau2=tau*2.;
+    
+    drift2+=drift*drift;
+    
+    drift2*=acyrus;
+    if(drift2 > 1e-8) 
+      drifta=(sqrt(1.+tau2*drift2)-1)/(drift2);
+    else drifta=tau;
+    
+    //cout << "drifta " << drifta << endl;
+    drift*=drifta;
+    
+  }
+  else {
+    error("Unknown drift_type in limDrift");
+  }
+  
+}
 //-------------------------------------------------------------------
 
 /*!
@@ -1076,11 +1113,14 @@ doublevar Dynspin_sampler::transition_prob(int point1, int point2,
                                          drift_type dtype) {
   doublevar prob=0;
   static Array1 <doublevar> drift(3);
+  doublevar spindrift;
   //cout << "transition probability" << endl;
 
   drift=trace(point1).drift;
+  spindrift=trace(point1).spin_drift;
 
   limDrift(drift, timestep, dtype);
+  limDrift(spindrift, timestep/spin_mass, dtype);
 
   for(int d=0; d< 3; d++) {
     
@@ -1094,8 +1134,8 @@ doublevar Dynspin_sampler::transition_prob(int point1, int point2,
   //can easily be done later
   
   if (spin_mass != INFINITY)
-    prob-=(trace(point2).spin-trace(point1).spin-trace(point1).spin_drift)
-         *(trace(point2).spin-trace(point1).spin-trace(point1).spin_drift)
+    prob-=(trace(point2).spin-trace(point1).spin-spindrift)
+         *(trace(point2).spin-trace(point1).spin-spindrift)
          /(2.0*timestep/spin_mass);
   
   return prob;
@@ -1202,10 +1242,14 @@ doublevar Dynspin_sampler::linear_symm(Point & p1, Point & p2,
 		      doublevar timestep, drift_type dtype,
 		      int ndim) {
   Array1 <doublevar> dr1(3), dr2(3);
+  doublevar ds1, ds2;
   dr1=p1.drift; dr2=p2.drift;
+  ds1=p1.spin_drift; ds2=p2.spin_drift;
 
   limDrift(dr1, timestep, dtype);
   limDrift(dr2, timestep, dtype);
+  limDrift(ds1, timestep/spin_mass, dtype);
+  limDrift(ds2, timestep/spin_mass, dtype);
 
   doublevar green_forward=0;
   for(int d=0; d< ndim; d++) {
@@ -1220,8 +1264,8 @@ doublevar Dynspin_sampler::linear_symm(Point & p1, Point & p2,
   if (spin_mass != INFINITY) {
     doublevar spin_tau = timestep/spin_mass;
     green_forward-=((p2.spin-p1.spin)*(p2.spin-p1.spin)
-      +(p2.spin-p1.spin)*(p2.spin_drift-p1.spin_drift)
-      +.5*(p2.spin_drift*p2.spin_drift+p1.spin_drift*p1.spin_drift))/(2.0*spin_tau);
+      +(p2.spin-p1.spin)*(ds2-ds1)
+      +.5*(ds2*ds2+ds1*ds1))/(2.0*spin_tau);
   }
 
   return green_forward;
@@ -1244,9 +1288,13 @@ int Dynspin_sampler::split_driver(int e,
 
   static Array1 <doublevar> c_olddrift(3);
   static Array1 <doublevar> c_newdrift(3);
+  static doublevar c_oldspindrift;
+  static doublevar c_newspindrift;
   
-  c_olddrift=trace(0).drift;  
+  c_olddrift=trace(0).drift;
+  c_oldspindrift=trace(0).spin_drift;  
   limDrift(c_olddrift, timesteps(depth), dtype);
+  limDrift(c_oldspindrift, timesteps(depth)/spin_mass, dtype);
 
   int ndim=sample->ndim();
 
@@ -1268,7 +1316,7 @@ int Dynspin_sampler::split_driver(int e,
   //It can easily be done though
   trace(depth).spin_gauss = rng.gasdev();
   trace(depth).spin_translation=trace(depth).spin_gauss*sqrt(timesteps(depth)/spin_mass)
-      + trace(0).spin_drift;
+      + c_oldspindrift;
   trace(depth).spin = trace(0).spin + trace(depth).spin_translation;
 
 
@@ -1312,7 +1360,7 @@ int Dynspin_sampler::split_driver(int e,
   info.diffuse_start.Resize(3);
   for(int d=0; d< ndim; d++)
     info.diffuse_start(d)=trace(0).pos(d)+c_olddrift(d);
-  info.spin_diffuse_start = trace(0).spin+trace(0).spin_drift;
+  info.spin_diffuse_start = trace(0).spin+c_oldspindrift;
   info.diffuse_end=trace(depth).pos;
   info.spin_diffuse_end = trace(depth).spin;
   info.new_pos=trace(depth).pos;

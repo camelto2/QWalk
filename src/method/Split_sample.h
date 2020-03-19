@@ -362,6 +362,7 @@ class SRK_dmc:public Dynamics_generator {
 
 int allocate(vector <string> & words, Dynamics_generator *& sam);
 void limDrift(Array1 <doublevar> & drift, doublevar tau, drift_type dtype);
+void limDrift(doublevar & drift, doublevar tau, drift_type dtype);
 
 //CM
 class Dynspin_sampler:public Dynamics_generator {
