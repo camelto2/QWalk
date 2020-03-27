@@ -1512,7 +1512,7 @@ template <class T> inline void Spinor_Slat_wf<T>::getSpinorComponents(Wavefuncti
     molecorb->updateSpinorComponents(sample,e,SOVal);
     for(int f=0; f< nfunc_; f++){
       for(int det=0;det<ndet;det++){
-        for(int mo=0; mo<nmo; mo++){
+        for(int mo=0; mo<nelectrons; mo++){
           Val(f,det,mo,0)=SOVal(dataptr->occupation(f,det)(mo),0);
           Val(f,det,mo,1)=SOVal(dataptr->occupation(f,det)(mo),1);
           Val(f,det,mo,2)=0.0; //Later will store Jastrow values
