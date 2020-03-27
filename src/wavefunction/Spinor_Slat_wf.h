@@ -1505,13 +1505,14 @@ template <class T> inline void Spinor_Slat_wf<T>::getSpinorComponents(Wavefuncti
   //if(parent->optimize_mo==0 && parent->optimize_det==0)
   //  error("staticSample==1 && parent->optimize_mo==0 && parent->optimize_det==0 not supported");
   //else{
+    Val.Resize(nfunc_, ndet, nmo, 3);
     Spinor_Slat_wf_data * dataptr;
     recast(wfdata, dataptr);
     Array2 <dcomplex> SOVal(nmo,3); SOVal=dcomplex(0,0);
     molecorb->updateSpinorComponents(sample,e,SOVal);
     for(int f=0; f< nfunc_; f++){
       for(int det=0;det<ndet;det++){
-        for(int mo=0; mo<nelectrons; mo++){
+        for(int mo=0; mo<nmo; mo++){
           Val(f,det,mo,0)=SOVal(dataptr->occupation(f,det)(mo),0);
           Val(f,det,mo,1)=SOVal(dataptr->occupation(f,det)(mo),1);
           Val(f,det,mo,2)=0.0; //Later will store Jastrow values
