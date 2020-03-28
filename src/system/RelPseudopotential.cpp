@@ -372,8 +372,8 @@ void RelPseudopotential::calcNonlocWithAllvariables(Wavefunction_data * wfdata,
               }
               integralpts(w,i)=0.0;
               integralpts(w,i)=(A_up*ratio1+B_do*ratio2)*integralweight(at, i)*Val(w,0,0,2)
-                               *(exp(WfVal_old.amp(w,0))*exp(-I*WfVal_old.phase(w,0)))
-                               /(exp(WfVal_old.amp(w,0))*(exp(WfVal_old.amp(w,0))))      ;
+                               *exp(-I*WfVal_old.phase(w,0))
+                               /exp(WfVal_old.amp(w,0));
              }
 //------------------------------------------------------- 
             
@@ -429,7 +429,6 @@ void RelPseudopotential::calcNonlocWithAllvariables(Wavefunction_data * wfdata,
 
   //cout << "psp: local part " << accum_local
   //<< "  nonlocal part " << accum_nonlocal << endl;
-
 }
 
 

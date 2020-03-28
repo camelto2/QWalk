@@ -42,7 +42,7 @@ class RelPseudopotential: public Pseudopotential
 {
 public:
   RelPseudopotential():maxaip(85)
-  {deterministic=0;}
+  {deterministic=1;}
   
 
   void read(vector < vector <string> > & pseudotext,

@@ -1508,7 +1508,7 @@ template <class T> inline void Spinor_Slat_wf<T>::getSpinorComponents(Wavefuncti
     Val.Resize(nfunc_, ndet, nmo, 3);
     Spinor_Slat_wf_data * dataptr;
     recast(wfdata, dataptr);
-    Array2 <dcomplex> SOVal(nmo,3); SOVal=dcomplex(0,0);
+    Array2 <dcomplex> SOVal(nmo,2); SOVal=dcomplex(0,0);
     molecorb->updateSpinorComponents(sample,e,SOVal);
     for(int f=0; f< nfunc_; f++){
       for(int det=0;det<ndet;det++){
