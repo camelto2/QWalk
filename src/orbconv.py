@@ -43,7 +43,7 @@ def func(nIon,name,ns_list,np_list,nd_list,nf_list,ng_list,orbital,table):
         fnorm=snorm*math.sqrt(105.0)
         fnorm2=fnorm
         fnorm3=fnorm
-        gnorm=snorm*math.sqrt(315.0)
+        gnorm=snorm*math.sqrt(945.0)
         gnorm2=gnorm
         gnorm3=gnorm
         gnorm4=gnorm
